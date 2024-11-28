@@ -1,0 +1,18 @@
+[package]
+name = "aurora_api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+sqlx = { workspace = true }
+redis = { workspace = true }
+serde = { workspace = true }
+serde_valid = { workspace = true }
+regex = { workspace = true }
+argon2 = { workspace = true }
+uuid7 = { workspace = true }
+jsonwebtoken = { workspace = true }
+chrono = { workspace = true }
+dotenvy = { workspace = true }
