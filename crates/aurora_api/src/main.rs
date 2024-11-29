@@ -24,6 +24,7 @@ use tokio::net::TcpListener;
 
 mod channels;
 mod error;
+mod fanout;
 mod flags;
 mod guilds;
 mod messages;
