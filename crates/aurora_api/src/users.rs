@@ -33,6 +33,7 @@ use crate::{
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateUser {
+    #[validate(pattern = r"^[a-b0-9_-]+$")]
     #[validate(min_length = 3)]
     #[validate(max_length = 32)]
     username: String,
