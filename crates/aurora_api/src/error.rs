@@ -35,7 +35,7 @@ pub enum OVTError {
     NotGuildOwner,
     GuildAlreadyJoined,
     InviteNotFound,
-    InvalidPermissionBitflags
+    InvalidPermissionBitflags,
 }
 
 impl OVTError {

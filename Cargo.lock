@@ -111,6 +111,7 @@ dependencies = [
  "redis",
  "regex",
  "serde",
+ "serde_json",
  "serde_valid",
  "sqlx",
  "tokio",

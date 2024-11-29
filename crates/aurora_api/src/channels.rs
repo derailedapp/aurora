@@ -28,6 +28,7 @@ use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
     guilds::verify_permissions,
+    pubsub::{publish, Event},
     state::OVTState,
     token::get_user,
 };
@@ -66,7 +67,7 @@ pub struct CreateGuildChannel {
 pub async fn create_guild_channel(
     headers: HeaderMap,
     Path(guild_id): Path<String>,
-    State(state): State<OVTState>,
+    State(mut state): State<OVTState>,
     Json(model): Json<CreateGuildChannel>,
 ) -> Result<Json<Channel>, (StatusCode, Json<ErrorMessage>)> {
     let user = get_user(&headers, &state.key, &state.pg).await?;
@@ -86,6 +87,8 @@ pub async fn create_guild_channel(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
+    publish(&mut state.redis, &guild.id, Event::ChannelCreate(&channel)).await?;
+
     Ok(Json(channel))
 }
 
@@ -104,7 +107,7 @@ pub struct ModifyGuildChannel {
 pub async fn modify_guild_channel(
     headers: HeaderMap,
     Path((guild_id, channel_id)): Path<(String, String)>,
-    State(state): State<OVTState>,
+    State(mut state): State<OVTState>,
     Json(model): Json<ModifyGuildChannel>,
 ) -> Result<Json<Channel>, (StatusCode, Json<ErrorMessage>)> {
     let user = get_user(&headers, &state.key, &state.pg).await?;
@@ -126,6 +129,12 @@ pub async fn modify_guild_channel(
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
     if let Some(modified_channel) = channel {
+        publish(
+            &mut state.redis,
+            &guild.id,
+            Event::ChannelModified(&modified_channel),
+        )
+        .await?;
         Ok(Json(modified_channel))
     } else {
         Err(OVTError::ChannelNotFound.to_resp())
@@ -135,7 +144,7 @@ pub async fn modify_guild_channel(
 pub async fn delete_guild_channel(
     headers: HeaderMap,
     Path((guild_id, channel_id)): Path<(String, String)>,
-    State(state): State<OVTState>,
+    State(mut state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
     let user = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
@@ -152,6 +161,13 @@ pub async fn delete_guild_channel(
     .execute(&state.pg)
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+    publish(
+        &mut state.redis,
+        &guild.id,
+        Event::ChannelDelete(&channel_id),
+    )
+    .await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }

@@ -27,6 +27,7 @@ mod error;
 mod flags;
 mod guilds;
 mod messages;
+mod pubsub;
 mod state;
 mod token;
 mod users;
