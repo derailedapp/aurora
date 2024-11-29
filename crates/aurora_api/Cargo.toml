@@ -16,3 +16,6 @@ uuid7 = { workspace = true }
 jsonwebtoken = { workspace = true }
 chrono = { workspace = true }
 dotenvy = { workspace = true }
+bitflags = { workspace = true }
+
+aurora_db = { workspace = true }

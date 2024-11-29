@@ -23,6 +23,8 @@ use state::OVTState;
 use tokio::net::TcpListener;
 
 mod error;
+mod flags;
+mod guilds;
 mod state;
 mod token;
 mod users;
@@ -53,7 +55,10 @@ async fn main() {
         key: env::var("JWT_SECRET_KEY").unwrap(),
     };
 
-    let app = Router::new().merge(users::router()).with_state(state);
+    let app = Router::new()
+        .merge(users::router())
+        .merge(guilds::router())
+        .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:24635").await.unwrap();
     axum::serve(listener, app).await.unwrap();

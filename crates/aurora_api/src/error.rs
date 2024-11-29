@@ -22,8 +22,14 @@ pub struct ErrorMessage {
     pub code: i32,
 }
 
+#[derive(Debug)]
 pub enum OVTError {
     InternalServerError,
+    InvalidEmailOrPassword,
+    InvalidToken,
+    ExpiredSession,
+    GuildNotFound,
+    InvalidPermissions,
 }
 
 impl OVTError {
@@ -34,6 +40,41 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Internal Server Error".to_string(),
                     code: 0,
+                }),
+            ),
+            Self::InvalidEmailOrPassword => (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorMessage {
+                    message: "Invalid email or password".to_string(),
+                    code: 1,
+                }),
+            ),
+            Self::InvalidToken => (
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorMessage {
+                    message: "Invalid session token".to_string(),
+                    code: 2,
+                }),
+            ),
+            Self::ExpiredSession => (
+                StatusCode::UNAUTHORIZED,
+                Json(ErrorMessage {
+                    message: "Session has expired or does not exist anymore".to_string(),
+                    code: 3,
+                }),
+            ),
+            Self::GuildNotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorMessage {
+                    message: "Guild not found".to_string(),
+                    code: 4,
+                }),
+            ),
+            Self::InvalidPermissions => (
+                StatusCode::FORBIDDEN,
+                Json(ErrorMessage {
+                    message: "Invalid permissions".to_string(),
+                    code: 5,
                 }),
             ),
         }

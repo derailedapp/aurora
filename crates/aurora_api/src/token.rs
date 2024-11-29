@@ -13,10 +13,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jsonwebtoken::{encode, EncodingKey, Header};
+use aurora_db::user::User;
+use axum::{
+    http::{HeaderMap, StatusCode},
+    Json,
+};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 
-use crate::error::OVTError;
+use crate::error::{ErrorMessage, OVTError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -27,6 +33,54 @@ pub struct Claims {
 
 impl Claims {
     pub fn make_token(&self, key: &EncodingKey) -> Result<String, OVTError> {
-        encode(&Header::default(), self, key).map_err(|_| OVTError::InternalServerError)
+        encode(&Header::new(jsonwebtoken::Algorithm::HS256), self, key)
+            .map_err(|_| OVTError::InternalServerError)
+    }
+
+    pub fn from_token(token: &str, key: &DecodingKey) -> Result<Self, OVTError> {
+        Ok(
+            decode::<Self>(token, key, &Validation::new(jsonwebtoken::Algorithm::HS256))
+                .map_err(|_| OVTError::InvalidToken)?
+                .claims,
+        )
+    }
+
+    pub fn from_token_map(
+        map: &HeaderMap,
+        key: &DecodingKey,
+    ) -> Result<Self, (StatusCode, Json<ErrorMessage>)> {
+        if let Some(token) = map.get("authorization") {
+            Self::from_token(
+                token
+                    .to_str()
+                    .map_err(|_| OVTError::InternalServerError.to_resp())?,
+                key,
+            )
+            .map_err(|err| err.to_resp())
+        } else {
+            Err(OVTError::InvalidToken.to_resp())
+        }
+    }
+}
+
+pub async fn get_user(
+    map: &HeaderMap,
+    key: &str,
+    db: &PgPool,
+) -> Result<User, (StatusCode, Json<ErrorMessage>)> {
+    let claims = Claims::from_token_map(map, &DecodingKey::from_secret(key.as_bytes()))?;
+
+    if let Some(user) = sqlx::query_as!(
+        User,
+        "SELECT * FROM users WHERE id IN (SELECT user_id FROM sessions WHERE id = $1);",
+        claims.sub
+    )
+    .fetch_optional(db)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?
+    {
+        Ok(user)
+    } else {
+        Err(OVTError::ExpiredSession.to_resp())
     }
 }

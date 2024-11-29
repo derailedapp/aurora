@@ -13,29 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
+use bitflags::bitflags;
 
-use crate::{DBError, FromId, FromIdResult};
-
-#[derive(FromRow, Serialize, Deserialize)]
-pub struct Guild {
-    pub id: String,
-    pub owner_id: String,
-    pub name: String,
-    #[sqlx(default)]
-    #[serde(skip_serializing)]
-    pub server_id: Option<String>,
-    #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub permissions: Option<i64>,
-}
-
-impl FromId<String> for Guild {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(Guild, "SELECT * FROM guilds WHERE id = $1;", id)
-            .fetch_one(db)
-            .await
-            .map_err(|_| DBError::RowNotFound)
+bitflags! {
+    pub struct GuildPermissions: u64 {
+        const MODIFY_GUILD = 1;
     }
 }

@@ -17,8 +17,9 @@ use std::time::Duration;
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
+    Argon2, PasswordHash, PasswordVerifier,
 };
+use aurora_db::user::User;
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
@@ -119,6 +120,68 @@ pub async fn register(
     result
 }
 
+#[derive(Deserialize, Validate)]
+pub struct Login {
+    #[validate(pattern = r"/^[^@\s]*?@[^@\s]*?\.[^@\s]*$/")]
+    email: String,
+    #[validate(min_length = 8)]
+    #[validate(max_length = 128)]
+    password: String,
+}
+
+pub async fn login(
+    State(state): State<OVTState>,
+    Json(model): Json<Login>,
+) -> Result<Json<TokenReturn>, (StatusCode, Json<ErrorMessage>)> {
+    let argon2 = Argon2::default();
+
+    let maybe_user = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1;", model.email)
+        .fetch_optional(&state.pg)
+        .await
+        .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+    if let Some(user) = maybe_user {
+        if argon2
+            .verify_password(
+                model.password.as_bytes(),
+                &PasswordHash::new(user.password.unwrap().as_str()).unwrap(),
+            )
+            .is_err()
+        {
+            return Err(OVTError::InvalidEmailOrPassword.to_resp());
+        }
+
+        let session_id = uuid7::uuid7().to_string();
+
+        sqlx::query!(
+            "INSERT INTO sessions (id, user_id) VALUES ($1, $2)",
+            &user.id,
+            &session_id
+        )
+        .execute(&state.pg)
+        .await
+        .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+        let time = chrono::Utc::now().timestamp_micros() as u128;
+
+        let claims = Claims {
+            sub: session_id,
+            exp: (time + Duration::from_weeks(6).as_micros()) as usize,
+            iat: time as usize,
+        };
+
+        Ok(Json(TokenReturn {
+            token: claims
+                .make_token(&EncodingKey::from_secret(state.key.as_bytes()))
+                .map_err(|err| err.to_resp())?,
+        }))
+    } else {
+        Err(OVTError::InvalidEmailOrPassword.to_resp())
+    }
+}
+
 pub fn router() -> Router<OVTState> {
-    Router::<OVTState>::new().route("/register", post(register))
+    Router::<OVTState>::new()
+        .route("/register", post(register))
+        .route("/login", post(login))
 }

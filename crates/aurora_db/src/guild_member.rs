@@ -27,8 +27,8 @@ pub struct GuildMember {
     pub server_id: Option<String>,
 }
 
-impl FromId<(String, String)> for GuildMember {
-    async fn from_id(db: &sqlx::PgPool, id: (String, String)) -> FromIdResult<Self> {
+impl<'a> FromId<(&'a str, &'a str)> for GuildMember {
+    async fn from_id(db: &sqlx::PgPool, id: (&'a str, &'a str)) -> FromIdResult<Self> {
         sqlx::query_as!(
             GuildMember,
             "SELECT * FROM guild_members WHERE user_id = $1 and guild_id = $2;",
