@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use aurora_db::{guild::Guild, message::Message, FromId};
+use aurora_db::{FromId, guild::Guild, message::Message};
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{patch, post},
-    Json, Router,
 };
 use serde::Deserialize;
 use serde_valid::Validate;
@@ -28,7 +28,7 @@ use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
     guilds::verify_permissions,
-    pubsub::{publish, Event},
+    pubsub::{Event, publish},
     state::OVTState,
     token::get_user,
 };

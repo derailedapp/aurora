@@ -16,11 +16,11 @@
 use std::time::Duration;
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2, PasswordHash, PasswordVerifier,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 use aurora_db::user::User;
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;

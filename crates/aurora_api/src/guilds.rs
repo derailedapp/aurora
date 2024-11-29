@@ -14,13 +14,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use aurora_db::{
-    guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, user::User, DBError, FromId,
+    DBError, FromId, guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, user::User,
 };
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     routing::{delete, patch, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
@@ -29,7 +29,7 @@ use sqlx::PgPool;
 use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
-    pubsub::{publish, Event},
+    pubsub::{Event, publish},
     state::OVTState,
     token::get_user,
 };
@@ -309,6 +309,30 @@ pub async fn delete_invite(
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }
 
+pub async fn leave_guild(
+    headers: HeaderMap,
+    Path(guild_id): Path<String>,
+    State(mut state): State<OVTState>,
+) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
+    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let guild = Guild::from_id(&state.pg, guild_id)
+        .await
+        .map_err(|_| OVTError::GuildNotFound.to_resp())?;
+    verify_permissions(&state.pg, &user, &guild, GuildPermissions::empty()).await?;
+
+    let mem = sqlx::query_as!(
+        GuildMember,
+        "DELETE FROM guild_members WHERE user_id = $1 RETURNING *;",
+        &user.id
+    )
+    .fetch_one(&state.pg)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?;
+    publish(&mut state.redis, &guild.id, Event::MemberLeave(&mem)).await?;
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
 pub fn router() -> Router<OVTState> {
     Router::<OVTState>::new()
         .route("/guilds", post(create_guild))
@@ -325,4 +349,5 @@ pub fn router() -> Router<OVTState> {
             delete(delete_invite),
         )
         .route("/invites/:invite_id", post(use_invite))
+        .route("/users/@me/guilds/:guild_id", delete(leave_guild))
 }
