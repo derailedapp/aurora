@@ -27,6 +27,7 @@ pub mod user_settings;
 
 pub enum DBError {
     RowNotFound,
+    DBErr,
 }
 
 pub type FromIdResult<T> = Result<T, DBError>;

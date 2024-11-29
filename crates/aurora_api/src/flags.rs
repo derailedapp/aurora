@@ -22,5 +22,8 @@ bitflags! {
         const VIEW_MESSAGE_HISTORY = 1 << 2;
         const SEND_MESSAGE = 1 << 3;
         const MANAGE_MESSAGES = 1 << 4;
+        const VIEW_GUILD_INVITE_LIST = 1 << 5;
+        const CREATE_INVITES = 1 << 6;
+        const MANAGE_INVITES = 1 << 7;
     }
 }

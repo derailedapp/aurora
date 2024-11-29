@@ -33,6 +33,8 @@ pub enum OVTError {
     ChannelNotFound,
     MessageNotFound,
     NotGuildOwner,
+    GuildAlreadyJoined,
+    InviteNotFound,
 }
 
 impl OVTError {
@@ -99,6 +101,20 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Guild owner only action".to_string(),
                     code: 8,
+                }),
+            ),
+            Self::GuildAlreadyJoined => (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorMessage {
+                    message: "User already joined guild".to_string(),
+                    code: 9,
+                }),
+            ),
+            Self::InviteNotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorMessage {
+                    message: "Invite not found".to_string(),
+                    code: 10,
                 }),
             ),
         }
