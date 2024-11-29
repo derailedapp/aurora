@@ -114,6 +114,8 @@ pub struct ModifyGuild {
     #[validate(min_length = 1)]
     #[validate(max_length = 32)]
     name: Option<String>,
+    #[serde(default)]
+    permissions: Option<u64>
 }
 
 // TODO: foreign servers
@@ -128,6 +130,12 @@ pub async fn modify_guild(
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
     verify_permissions(&state.pg, &user, &guild, GuildPermissions::MODIFY_GUILD).await?;
+
+    if let Some(perms) = model.permissions {
+        if let None = GuildPermissions::from_bits(perms) {
+            return Err(OVTError::InvalidPermissionBitflags.to_resp());
+        }
+    }
 
     let modified_guild = sqlx::query_as!(
         Guild,

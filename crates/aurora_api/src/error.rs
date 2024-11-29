@@ -35,6 +35,7 @@ pub enum OVTError {
     NotGuildOwner,
     GuildAlreadyJoined,
     InviteNotFound,
+    InvalidPermissionBitflags
 }
 
 impl OVTError {
@@ -115,6 +116,13 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Invite not found".to_string(),
                     code: 10,
+                }),
+            ),
+            Self::InvalidPermissionBitflags => (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorMessage {
+                    message: "Invalid permission bit flags".to_string(),
+                    code: 11,
                 }),
             ),
         }
