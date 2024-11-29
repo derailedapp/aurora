@@ -25,10 +25,13 @@ pub struct Channel {
     #[sqlx(default)]
     #[serde(skip_serializing)]
     pub server_id: Option<String>,
-    pub guild_id: String,
+    #[sqlx(default)]
+    #[serde(default)]
+    pub guild_id: Option<String>,
     #[sqlx(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_message_id: Option<String>,
+    pub position: i32,
 }
 
 impl FromId<String> for Channel {

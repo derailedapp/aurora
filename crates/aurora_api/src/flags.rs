@@ -18,5 +18,9 @@ use bitflags::bitflags;
 bitflags! {
     pub struct GuildPermissions: u64 {
         const MODIFY_GUILD = 1;
+        const MANAGE_CHANNELS = 1 << 1;
+        const VIEW_MESSAGE_HISTORY = 1 << 2;
+        const SEND_MESSAGE = 1 << 3;
+        const MANAGE_MESSAGES = 1 << 4;
     }
 }

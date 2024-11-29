@@ -30,7 +30,7 @@ use crate::{
     token::get_user,
 };
 
-async fn verify_permissions(
+pub async fn verify_permissions(
     db: &PgPool,
     user: &User,
     guild: &Guild,
@@ -52,7 +52,7 @@ async fn verify_permissions(
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct CreateGuild {
     name: String,
 }
@@ -96,7 +96,7 @@ pub async fn create_guild(
     Ok(Json(guild))
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ModifyGuild {
     #[serde(default)]
     name: Option<String>,

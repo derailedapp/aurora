@@ -31,7 +31,7 @@ use crate::{
     token::Claims,
 };
 
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateUser {
     #[validate(min_length = 3)]
     #[validate(max_length = 32)]
@@ -120,7 +120,7 @@ pub async fn register(
     result
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct Login {
     #[validate(pattern = r"/^[^@\s]*?@[^@\s]*?\.[^@\s]*$/")]
     email: String,

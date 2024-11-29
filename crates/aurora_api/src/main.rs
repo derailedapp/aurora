@@ -22,9 +22,11 @@ use sqlx::postgres::PgPoolOptions;
 use state::OVTState;
 use tokio::net::TcpListener;
 
+mod channels;
 mod error;
 mod flags;
 mod guilds;
+mod messages;
 mod state;
 mod token;
 mod users;
@@ -58,6 +60,8 @@ async fn main() {
     let app = Router::new()
         .merge(users::router())
         .merge(guilds::router())
+        .merge(channels::router())
+        .merge(messages::router())
         .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:24635").await.unwrap();

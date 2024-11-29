@@ -30,6 +30,8 @@ pub enum OVTError {
     ExpiredSession,
     GuildNotFound,
     InvalidPermissions,
+    ChannelNotFound,
+    MessageNotFound,
 }
 
 impl OVTError {
@@ -75,6 +77,20 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Invalid permissions".to_string(),
                     code: 5,
+                }),
+            ),
+            Self::ChannelNotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorMessage {
+                    message: "Channel not found".to_string(),
+                    code: 6,
+                }),
+            ),
+            Self::MessageNotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorMessage {
+                    message: "Message not found".to_string(),
+                    code: 7,
                 }),
             ),
         }
