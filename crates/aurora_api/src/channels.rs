@@ -21,6 +21,7 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
+use serde_valid::Validate;
 use sqlx::PgPool;
 
 use crate::{
@@ -53,8 +54,11 @@ pub async fn get_channel(
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateGuildChannel {
+    #[validate(pattern = r"^[a-b0-9_-]+$")]
+    #[validate(min_length = 1)]
+    #[validate(max_length = 32)]
     name: String,
 }
 
@@ -75,7 +79,7 @@ pub async fn create_guild_channel(
         Channel,
         "INSERT INTO channels (id, name, guild_id, position) VALUES ($1, $2, $3, 0) RETURNING *;",
         uuid7::uuid7().to_string(),
-        model.name,
+        model.name.trim(),
         &guild.id
     )
     .fetch_one(&state.pg)
@@ -85,10 +89,15 @@ pub async fn create_guild_channel(
     Ok(Json(channel))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ModifyGuildChannel {
+    #[validate(pattern = r"^[a-b0-9_-]+$")]
+    #[validate(min_length = 1)]
+    #[validate(max_length = 32)]
     name: String,
-    position: i32,
+    #[validate(minimum = 0)]
+    #[validate(maximum = 200)]
+    position: u32,
 }
 
 // TODO: foreign servers
@@ -107,8 +116,8 @@ pub async fn modify_guild_channel(
     let channel = sqlx::query_as!(
         Channel,
         "UPDATE channels SET name = $1, position = $2 WHERE id = $3 AND guild_id = $4 RETURNING *;",
-        &model.name,
-        &model.position,
+        &model.name.trim(),
+        model.position as i32,
         &channel_id,
         &guild.id
     )
@@ -123,11 +132,35 @@ pub async fn modify_guild_channel(
     }
 }
 
+pub async fn delete_guild_channel(
+    headers: HeaderMap,
+    Path((guild_id, channel_id)): Path<(String, String)>,
+    State(state): State<OVTState>,
+) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
+    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let guild = Guild::from_id(&state.pg, guild_id)
+        .await
+        .map_err(|_| OVTError::GuildNotFound.to_resp())?;
+    get_channel(&state.pg, &channel_id, &guild.id).await?;
+    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
+
+    sqlx::query!(
+        "DELETE FROM channels WHERE id = $1 AND guild_id = $2;",
+        &channel_id,
+        &guild.id
+    )
+    .execute(&state.pg)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
 pub fn router() -> Router<OVTState> {
     Router::<OVTState>::new()
         .route("/guilds/:guild_id/channels", post(create_guild_channel))
         .route(
             "/guilds/:guild_id/channels/:channel_id",
-            patch(modify_guild_channel),
+            patch(modify_guild_channel).delete(delete_guild_channel),
         )
 }

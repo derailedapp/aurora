@@ -32,6 +32,7 @@ pub enum OVTError {
     InvalidPermissions,
     ChannelNotFound,
     MessageNotFound,
+    NotGuildOwner,
 }
 
 impl OVTError {
@@ -91,6 +92,13 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Message not found".to_string(),
                     code: 7,
+                }),
+            ),
+            Self::NotGuildOwner => (
+                StatusCode::FORBIDDEN,
+                Json(ErrorMessage {
+                    message: "Guild owner only action".to_string(),
+                    code: 8,
                 }),
             ),
         }

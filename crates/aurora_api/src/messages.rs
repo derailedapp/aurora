@@ -89,8 +89,10 @@ pub async fn get_guild_channel_messages(
     Ok(Json(messages))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct CreateMessage {
+    #[validate(min_length = 1)]
+    #[validate(max_length = 2048)]
     content: String,
 }
 

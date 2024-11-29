@@ -21,6 +21,7 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
+use serde_valid::Validate;
 use sqlx::PgPool;
 
 use crate::{
@@ -52,8 +53,10 @@ pub async fn verify_permissions(
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct CreateGuild {
+    #[validate(min_length = 1)]
+    #[validate(max_length = 32)]
     name: String,
 }
 
@@ -96,9 +99,11 @@ pub async fn create_guild(
     Ok(Json(guild))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ModifyGuild {
     #[serde(default)]
+    #[validate(min_length = 1)]
+    #[validate(max_length = 32)]
     name: Option<String>,
 }
 
@@ -128,8 +133,33 @@ pub async fn modify_guild(
     Ok(Json(modified_guild))
 }
 
+pub async fn delete_guild(
+    headers: HeaderMap,
+    Path(guild_id): Path<String>,
+    State(state): State<OVTState>,
+) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
+    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let guild = Guild::from_id(&state.pg, guild_id)
+        .await
+        .map_err(|_| OVTError::GuildNotFound.to_resp())?;
+
+    if user.id != guild.id {
+        return Err(OVTError::NotGuildOwner.to_resp());
+    }
+
+    sqlx::query!("DELETE FROM guilds WHERE id = $1;", &guild.id,)
+        .execute(&state.pg)
+        .await
+        .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
 pub fn router() -> Router<OVTState> {
     Router::<OVTState>::new()
         .route("/guilds", post(create_guild))
-        .route("/guilds/:guild_id", patch(modify_guild))
+        .route(
+            "/guilds/:guild_id",
+            patch(modify_guild).delete(delete_guild),
+        )
 }
