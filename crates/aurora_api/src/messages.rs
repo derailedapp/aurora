@@ -15,12 +15,13 @@
 
 use aurora_db::{guild::Guild, message::Message, FromId};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{patch, post},
     Json, Router,
 };
 use serde::Deserialize;
+use serde_valid::Validate;
 
 use crate::{
     channels::get_channel,
@@ -30,6 +31,63 @@ use crate::{
     state::OVTState,
     token::get_user,
 };
+
+#[derive(Deserialize, Validate)]
+pub struct GetGuildChannelMessagesFilter {
+    #[validate(minimum = 5)]
+    #[validate(maximum = 256)]
+    limit: i64,
+    #[serde(default)]
+    before: Option<String>,
+    #[serde(default)]
+    after: Option<String>,
+}
+
+impl Default for GetGuildChannelMessagesFilter {
+    fn default() -> Self {
+        Self {
+            limit: 30,
+            before: None,
+            after: None,
+        }
+    }
+}
+
+pub async fn get_guild_channel_messages(
+    headers: HeaderMap,
+    maybe_filters: Option<Query<GetGuildChannelMessagesFilter>>,
+    Path((guild_id, channel_id)): Path<(String, String)>,
+    State(state): State<OVTState>,
+) -> Result<Json<Vec<Message>>, (StatusCode, Json<ErrorMessage>)> {
+    let Query(filters) = maybe_filters.unwrap_or_default();
+
+    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let guild = Guild::from_id(&state.pg, guild_id)
+        .await
+        .map_err(|_| OVTError::GuildNotFound.to_resp())?;
+    let channel = get_channel(&state.pg, &channel_id, &guild.id).await?;
+    verify_permissions(
+        &state.pg,
+        &user,
+        &guild,
+        GuildPermissions::VIEW_MESSAGE_HISTORY,
+    )
+    .await?;
+
+    let messages = sqlx::query_as!(
+        Message,
+        "SELECT * FROM messages WHERE channel_id = $1 AND id > $2 AND id < $3 LIMIT $4;",
+        &channel.id,
+        filters.after,
+        filters.before,
+        filters.limit
+    )
+    .fetch_all(&state.pg)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?;
+
+    Ok(Json(messages))
+}
 
 #[derive(Deserialize)]
 pub struct CreateMessage {
@@ -134,7 +192,7 @@ pub fn router() -> Router<OVTState> {
     Router::<OVTState>::new()
         .route(
             "/guilds/:guild_id/channels/:channel_id/messages",
-            post(create_guild_channel_message),
+            post(create_guild_channel_message).get(get_guild_channel_messages),
         )
         .route(
             "/guilds/:guild_id/channels/:channel_id/messages/:message_id",
