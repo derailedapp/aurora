@@ -43,7 +43,7 @@ pub async fn publish<'a>(
     let message =
         serde_json::to_string(&event).map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    conn.publish(channel, &message)
+    let _: () = conn.publish(channel, &message)
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
