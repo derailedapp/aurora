@@ -14,7 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use aurora_db::{
-    guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, user::User, DBError, FromId,
+    actor::Actor, guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, DBError,
+    FromId,
 };
 use axum::{
     extract::{Path, State},
@@ -36,7 +37,7 @@ use crate::{
 
 pub async fn verify_permissions(
     db: &PgPool,
-    user: &User,
+    user: &Actor,
     guild: &Guild,
     required_permissions: GuildPermissions,
 ) -> Result<(), (StatusCode, Json<ErrorMessage>)> {
@@ -72,7 +73,7 @@ pub async fn create_guild(
     State(mut state): State<OVTState>,
     Json(model): Json<CreateGuild>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
 
     let mut tx = state
         .pg
@@ -86,7 +87,7 @@ pub async fn create_guild(
         Guild,
         "INSERT INTO guilds (id, owner_id, name, permissions) VALUES ($1, $2, $3, $4) RETURNING *;",
         uuid7::uuid7().to_string(),
-        &user.id,
+        &actor.id,
         model.name,
         perms as i64
     )
@@ -96,7 +97,7 @@ pub async fn create_guild(
     sqlx::query!(
         "INSERT INTO guild_members (guild_id, user_id) VALUES ($1, $2);",
         &guild.id,
-        &user.id
+        &actor.id
     )
     .execute(&mut *tx)
     .await
@@ -104,7 +105,7 @@ pub async fn create_guild(
 
     publish(
         &mut state.redis,
-        &user.id,
+        &actor.id,
         Event::GuildCreate(guild.clone()),
     )
     .await?;
@@ -133,11 +134,11 @@ pub async fn modify_guild(
     State(mut state): State<OVTState>,
     Json(model): Json<ModifyGuild>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MODIFY_GUILD).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::MODIFY_GUILD).await?;
 
     if let Some(perms) = model.permissions {
         if GuildPermissions::from_bits(perms).is_none() {
@@ -170,12 +171,12 @@ pub async fn delete_guild(
     Path(guild_id): Path<String>,
     State(mut state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
 
-    if user.id != guild.id {
+    if actor.id != guild.id {
         return Err(OVTError::NotGuildOwner.to_resp());
     }
 
@@ -186,7 +187,7 @@ pub async fn delete_guild(
 
     publish(
         &mut state.redis,
-        &user.id,
+        &actor.id,
         Event::GuildDelete(guild.id.clone()),
     )
     .await?;
@@ -206,7 +207,7 @@ pub async fn use_invite(
     Path(invite_id): Path<String>,
     State(mut state): State<OVTState>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
 
     let invite = sqlx::query!("SELECT * FROM guild_invites WHERE id = $1;", invite_id)
         .fetch_optional(&state.pg)
@@ -217,7 +218,7 @@ pub async fn use_invite(
         let guild = Guild::from_id(&state.pg, inv.guild_id)
             .await
             .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-        let member = GuildMember::from_id(&state.pg, (&user.id, &guild.id)).await;
+        let member = GuildMember::from_id(&state.pg, (&actor.id, &guild.id)).await;
 
         if member.is_ok() {
             return Err(OVTError::GuildAlreadyJoined.to_resp());
@@ -231,14 +232,14 @@ pub async fn use_invite(
 
         sqlx::query!(
             "INSERT INTO guild_members (user_id, guild_id) VALUES ($1, $2)",
-            &user.id,
+            &actor.id,
             &guild.id
         )
         .execute(&state.pg)
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-        publish(&mut state.redis, &guild.id, Event::MemberJoin(user.clone())).await?;
+        publish(&mut state.redis, &guild.id, Event::MemberJoin(actor)).await?;
 
         Ok(Json(guild))
     } else {
@@ -252,11 +253,11 @@ pub async fn get_guild_invites(
     Path(guild_id): Path<String>,
     State(state): State<OVTState>,
 ) -> Result<Json<Vec<String>>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::CREATE_INVITES).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::CREATE_INVITES).await?;
 
     let invites = sqlx::query_as!(
         GuildInvite,
@@ -277,11 +278,11 @@ pub async fn create_invite(
     Path(guild_id): Path<String>,
     State(state): State<OVTState>,
 ) -> Result<Json<ReturnedInvite>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::CREATE_INVITES).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::CREATE_INVITES).await?;
 
     let invite = sqlx::query_as!(
         GuildInvite,
@@ -301,11 +302,11 @@ pub async fn delete_invite(
     Path((guild_id, invite_id)): Path<(String, String)>,
     State(state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MANAGE_INVITES).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::MANAGE_INVITES).await?;
 
     sqlx::query!(
         "DELETE FROM guild_invites WHERE id = $1 AND guild_id = $2;",
@@ -324,16 +325,16 @@ pub async fn leave_guild(
     Path(guild_id): Path<String>,
     State(mut state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::empty()).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::empty()).await?;
 
     let mem = sqlx::query_as!(
         GuildMember,
         "DELETE FROM guild_members WHERE user_id = $1 RETURNING *;",
-        &user.id
+        &actor.id
     )
     .fetch_one(&state.pg)
     .await

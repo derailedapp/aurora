@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use aurora_db::{
-    channel::Channel, guild::Guild, guild_member::GuildMember, message::Message, user::User,
+    actor::Actor, channel::Channel, guild::Guild, guild_member::GuildMember, message::Message,
 };
 use axum::{extract::Json, http::StatusCode};
 use redis::{aio::MultiplexedConnection, AsyncCommands};
@@ -28,7 +28,7 @@ pub enum Event {
     GuildCreate(Guild),
     GuildUpdate(Guild),
     GuildDelete(String),
-    MemberJoin(User),
+    MemberJoin(Actor),
     MemberLeave(GuildMember),
     MessageCreate(Message),
     MessageModified(Message),

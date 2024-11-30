@@ -19,26 +19,20 @@ use sqlx::prelude::FromRow;
 use crate::{DBError, FromId, FromIdResult};
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
-pub struct User {
+pub struct Actor {
     pub id: String,
-    pub username: String,
-    #[sqlx(default)]
-    pub display_name: Option<String>,
-    #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[sqlx(default)]
-    #[serde(skip_serializing)]
-    pub password: Option<String>,
-    #[sqlx(default)]
-    pub flags: Option<i32>,
-    #[sqlx(default)]
     pub server_id: Option<String>,
+    // @vincentrps@example.com
+    pub username: String,
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub bio: Option<String>,
 }
 
-impl FromId<String> for User {
+impl FromId<String> for Actor {
     async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(User, "SELECT * FROM users WHERE id = $1;", id)
+        sqlx::query_as!(Actor, "SELECT * FROM actors WHERE id = $1;", id)
             .fetch_one(db)
             .await
             .map_err(|_| DBError::RowNotFound)

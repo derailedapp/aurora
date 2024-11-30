@@ -62,14 +62,14 @@ pub async fn get_guild_channel_messages(
 ) -> Result<Json<Vec<Message>>, (StatusCode, Json<ErrorMessage>)> {
     let Query(filters) = maybe_filters.unwrap_or_default();
 
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
     let channel = get_channel(&state.pg, &channel_id, &guild.id).await?;
     verify_permissions(
         &state.pg,
-        &user,
+        &actor,
         &guild,
         GuildPermissions::VIEW_MESSAGE_HISTORY,
     )
@@ -103,18 +103,18 @@ pub async fn create_guild_channel_message(
     State(mut state): State<OVTState>,
     Json(model): Json<CreateMessage>,
 ) -> Result<Json<Message>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
     let channel = get_channel(&state.pg, &channel_id, &guild.id).await?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::SEND_MESSAGE).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::SEND_MESSAGE).await?;
 
     let message = sqlx::query_as!(
         Message,
         "INSERT INTO messages (id, author_id, channel_id, content) VALUES ($1, $2, $3, $4) RETURNING *;",
         uuid7::uuid7().to_string(),
-        &user.id,
+        &actor.id,
         &channel.id,
         model.content
     ).fetch_one(&state.pg).await.map_err(|_| OVTError::InternalServerError.to_resp())?;
@@ -135,7 +135,7 @@ pub async fn modify_guild_channel_message(
     State(mut state): State<OVTState>,
     Json(model): Json<CreateMessage>,
 ) -> Result<Json<Message>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
@@ -146,7 +146,7 @@ pub async fn modify_guild_channel_message(
         "UPDATE messages SET content = $2 WHERE id = $1 AND author_id = $3 RETURNING *;",
         message_id,
         model.content,
-        &user.id
+        &actor.id
     )
     .fetch_optional(&state.pg)
     .await
@@ -171,7 +171,7 @@ pub async fn delete_guild_channel_message(
     Path((guild_id, channel_id, message_id)): Path<(String, String, String)>,
     State(mut state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
@@ -188,7 +188,7 @@ pub async fn delete_guild_channel_message(
     let everyone_perms = GuildPermissions::from_bits(guild.permissions.unwrap() as u64).unwrap();
 
     let is_message_author = if let Some(author_id) = &message.author_id {
-        author_id.eq(&user.id)
+        author_id.eq(&actor.id)
     } else {
         false
     };

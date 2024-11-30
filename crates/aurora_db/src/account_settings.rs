@@ -19,16 +19,16 @@ use sqlx::prelude::FromRow;
 use crate::{DBError, FromId, FromIdResult};
 
 #[derive(Serialize, FromRow, Clone)]
-pub struct UserSettings {
+pub struct AccountSettings {
     pub id: String,
     pub theme: String,
 }
 
-impl FromId<String> for UserSettings {
+impl FromId<String> for AccountSettings {
     async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
         sqlx::query_as!(
-            UserSettings,
-            "SELECT * FROM user_settings WHERE id = $1;",
+            AccountSettings,
+            "SELECT * FROM account_settings WHERE id = $1;",
             id
         )
         .fetch_one(db)

@@ -1,7 +1,7 @@
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES accounts(id)
 );
 CREATE TABLE guild_invites (
     -- ~12345abcde@example.com

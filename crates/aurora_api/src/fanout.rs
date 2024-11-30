@@ -67,7 +67,7 @@ impl<'a> Fanout {
     }
 
     pub async fn add_sender<'b>(&'b mut self, channel: String, sender: Sender<Event>) {
-        let senders = self.channels.entry(channel.clone()).or_insert(Vec::new());
+        let senders = self.channels.entry(channel.clone()).or_default();
 
         if Vec::is_empty(senders) {
             // NOTE: should never be None since process_continuously
@@ -80,8 +80,8 @@ impl<'a> Fanout {
         senders.push(sender);
     }
 
-    pub fn remove_sender<'b>(&'b mut self, channel: String, sender: Sender<Event>) {
-        let senders = self.channels.entry(channel).or_insert(Vec::new());
+    pub fn remove_sender(&mut self, channel: String, sender: Sender<Event>) {
+        let senders = self.channels.entry(channel).or_default();
 
         senders.remove(
             senders

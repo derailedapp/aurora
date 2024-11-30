@@ -15,6 +15,9 @@
 
 use sqlx::PgPool;
 
+pub mod account;
+pub mod account_settings;
+pub mod actor;
 pub mod channel;
 pub mod guild;
 pub mod guild_invite;
@@ -22,8 +25,6 @@ pub mod guild_member;
 pub mod message;
 pub mod server;
 pub mod session;
-pub mod user;
-pub mod user_settings;
 
 pub enum DBError {
     RowNotFound,

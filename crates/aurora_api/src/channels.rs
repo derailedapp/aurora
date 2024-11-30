@@ -70,11 +70,11 @@ pub async fn create_guild_channel(
     State(mut state): State<OVTState>,
     Json(model): Json<CreateGuildChannel>,
 ) -> Result<Json<Channel>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
 
     let channel = sqlx::query_as!(
         Channel,
@@ -115,11 +115,11 @@ pub async fn modify_guild_channel(
     State(mut state): State<OVTState>,
     Json(model): Json<ModifyGuildChannel>,
 ) -> Result<Json<Channel>, (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
 
     let channel = sqlx::query_as!(
         Channel,
@@ -151,12 +151,12 @@ pub async fn delete_guild_channel(
     Path((guild_id, channel_id)): Path<(String, String)>,
     State(mut state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
-    let user = get_user(&headers, &state.key, &state.pg).await?;
+    let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
         .await
         .map_err(|_| OVTError::GuildNotFound.to_resp())?;
     get_channel(&state.pg, &channel_id, &guild.id).await?;
-    verify_permissions(&state.pg, &user, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
+    verify_permissions(&state.pg, &actor, &guild, GuildPermissions::MANAGE_CHANNELS).await?;
 
     sqlx::query!(
         "DELETE FROM channels WHERE id = $1 AND guild_id = $2;",

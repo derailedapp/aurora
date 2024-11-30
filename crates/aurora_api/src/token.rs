@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use aurora_db::user::User;
+use aurora_db::{account::Account, actor::Actor};
 use axum::{
     http::{HeaderMap, StatusCode},
     Json,
@@ -67,19 +67,29 @@ pub async fn get_user(
     map: &HeaderMap,
     key: &str,
     db: &PgPool,
-) -> Result<User, (StatusCode, Json<ErrorMessage>)> {
+) -> Result<(Actor, Account), (StatusCode, Json<ErrorMessage>)> {
     let claims = Claims::from_token_map(map, &DecodingKey::from_secret(key.as_bytes()))?;
 
-    if let Some(user) = sqlx::query_as!(
-        User,
-        "SELECT * FROM users WHERE id IN (SELECT user_id FROM sessions WHERE id = $1);",
+    if let Some(account) = sqlx::query_as!(
+        Account,
+        "SELECT * FROM accounts WHERE id IN (SELECT user_id FROM sessions WHERE id = $1);",
         claims.sub
     )
     .fetch_optional(db)
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?
     {
-        Ok(user)
+        Ok((
+            sqlx::query_as!(
+                Actor,
+                "SELECT * FROM actors WHERE id = $1;",
+                &account.actor_id
+            )
+            .fetch_one(db)
+            .await
+            .map_err(|_| OVTError::InternalServerError.to_resp())?,
+            account,
+        ))
     } else {
         Err(OVTError::ExpiredSession.to_resp())
     }

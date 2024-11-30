@@ -19,7 +19,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2, PasswordHash, PasswordVerifier,
 };
-use aurora_db::user::User;
+use aurora_db::account::Account;
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize, Validate)]
-pub struct CreateUser {
+pub struct CreateAccount {
     #[validate(pattern = r"^[a-b0-9_-]+$")]
     #[validate(min_length = 3)]
     #[validate(max_length = 32)]
@@ -51,7 +51,7 @@ pub struct TokenReturn {
 
 pub async fn register(
     State(state): State<OVTState>,
-    Json(model): Json<CreateUser>,
+    Json(model): Json<CreateAccount>,
 ) -> Result<Json<TokenReturn>, (StatusCode, Json<ErrorMessage>)> {
     let salt = SaltString::generate(&mut OsRng);
 
@@ -75,9 +75,17 @@ pub async fn register(
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
     sqlx::query!(
-        "INSERT INTO users (id, username, email, password, flags) VALUES ($1, $2, $3, $4, 0)",
+        "INSERT INTO actors (id, username) VALUES ($1, $2);",
         &user_id,
         &model.username,
+    )
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?;
+    sqlx::query!(
+        "INSERT INTO accounts (id, actor_id, email, password, flags) VALUES ($1, $2, $3, $4, 0);",
+        &user_id,
+        &user_id,
         &model.email,
         password_hash
     )
@@ -85,14 +93,14 @@ pub async fn register(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
     sqlx::query!(
-        "INSERT INTO user_settings (id, theme) VALUES ($1, 'dark')",
+        "INSERT INTO account_settings (id, theme) VALUES ($1, 'dark');",
         &user_id
     )
     .execute(&mut *tx)
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
     sqlx::query!(
-        "INSERT INTO sessions (id, user_id) VALUES ($1, $2)",
+        "INSERT INTO sessions (id, user_id) VALUES ($1, $2);",
         &user_id,
         &session_id
     )
@@ -136,10 +144,14 @@ pub async fn login(
 ) -> Result<Json<TokenReturn>, (StatusCode, Json<ErrorMessage>)> {
     let argon2 = Argon2::default();
 
-    let maybe_user = sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1;", model.email)
-        .fetch_optional(&state.pg)
-        .await
-        .map_err(|_| OVTError::InternalServerError.to_resp())?;
+    let maybe_user = sqlx::query_as!(
+        Account,
+        "SELECT * FROM accounts WHERE email = $1;",
+        model.email
+    )
+    .fetch_optional(&state.pg)
+    .await
+    .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
     if let Some(user) = maybe_user {
         if argon2

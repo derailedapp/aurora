@@ -5,21 +5,31 @@ CREATE TABLE servers (
     -- example.com/api | api.example.com
     api_url TEXT NOT NULL
 );
-CREATE TABLE users (
+CREATE TABLE actors (
     -- @12345abcde@example.com
     id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
+    server_id TEXT,
+    -- @vincentrps@example.com
+    username TEXT NOT NULL UNIQUE,
     display_name TEXT,
+    avatar_url TEXT,
+    banner_url TEXT,
+    bio TEXT,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+);
+CREATE TABLE accounts (
+    -- 12345abcde
+    id TEXT PRIMARY KEY,
+    actor_id TEXT NOT NULL,
     email TEXT,
     password TEXT,
     flags INTEGER,
-    server_id TEXT,
-    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+    FOREIGN KEY (actor_id) REFERENCES actors(id) ON DELETE CASCADE
 );
-CREATE TABLE user_settings (
+CREATE TABLE account_settings (
     id TEXT PRIMARY KEY,
     theme TEXT NOT NULL,
-    FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (id) REFERENCES accounts(id) ON DELETE CASCADE
 );
 CREATE TABLE guilds (
     -- !12345abcde@example.com
@@ -28,14 +38,14 @@ CREATE TABLE guilds (
     name TEXT NOT NULL,
     server_id TEXT,
     permissions BIGINT,
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (owner_id) REFERENCES accounts(id) ON DELETE CASCADE,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 CREATE TABLE guild_members (
     guild_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     server_id TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES actors(id) ON DELETE CASCADE,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
     PRIMARY KEY (guild_id, user_id)
 );
@@ -56,6 +66,6 @@ CREATE TABLE messages (
     author_id TEXT,
     channel_id TEXT NOT NULL,
     content TEXT NOT NULL,
-    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES actors(id) ON DELETE CASCADE,
     FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
 )
