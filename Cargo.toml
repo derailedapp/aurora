@@ -17,5 +17,6 @@ jsonwebtoken = "9"
 chrono = "0.4"
 dotenvy = "0.15"
 bitflags = "2"
+futures-util = "0.3"
 
 aurora_db = { path = "./crates/aurora_db" }

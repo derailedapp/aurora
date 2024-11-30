@@ -13,26 +13,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::Serialize;
-use sqlx::prelude::FromRow;
+//! Temporary Redis-based implementation of the Derailed Gateway
 
-use crate::{DBError, FromId, FromIdResult};
+use std::collections::BTreeMap;
 
-#[derive(FromRow, Serialize, Clone)]
-pub struct GuildInvite {
-    pub id: String,
-    pub guild_id: String,
-}
+use tokio::sync::Mutex;
 
-impl FromId<String> for GuildInvite {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(
-            GuildInvite,
-            "SELECT * FROM guild_invites WHERE id = $1;",
-            id
-        )
-        .fetch_one(db)
-        .await
-        .map_err(|_| DBError::RowNotFound)
-    }
-}
+use crate::fanout::Fanout;
+
+const FANOUT: Mutex<Fanout> = Mutex::const_new(Fanout {
+    channels: BTreeMap::new(),
+    sink: None,
+});
+
+pub struct GatewayConnection;

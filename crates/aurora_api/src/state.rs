@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use redis::aio::MultiplexedConnection;
+use redis::{aio::MultiplexedConnection, Client};
 use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
@@ -22,4 +22,5 @@ pub struct OVTState {
     #[allow(unused)]
     pub redis: MultiplexedConnection,
     pub key: String,
+    pub client: Client,
 }

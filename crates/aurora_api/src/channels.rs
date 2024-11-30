@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use aurora_db::{FromId, channel::Channel, guild::Guild};
+use aurora_db::{channel::Channel, guild::Guild, FromId};
 use axum::{
-    Json, Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     routing::{patch, post},
+    Json, Router,
 };
 use serde::Deserialize;
 use serde_valid::Validate;
@@ -28,7 +28,7 @@ use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
     guilds::verify_permissions,
-    pubsub::{Event, publish},
+    pubsub::{publish, Event},
     state::OVTState,
     token::get_user,
 };
@@ -87,7 +87,12 @@ pub async fn create_guild_channel(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(&mut state.redis, &guild.id, Event::ChannelCreate(&channel)).await?;
+    publish(
+        &mut state.redis,
+        &guild.id,
+        Event::ChannelCreate(channel.clone()),
+    )
+    .await?;
 
     Ok(Json(channel))
 }
@@ -132,7 +137,7 @@ pub async fn modify_guild_channel(
         publish(
             &mut state.redis,
             &guild.id,
-            Event::ChannelModified(&modified_channel),
+            Event::ChannelModified(modified_channel.clone()),
         )
         .await?;
         Ok(Json(modified_channel))
@@ -165,7 +170,7 @@ pub async fn delete_guild_channel(
     publish(
         &mut state.redis,
         &guild.id,
-        Event::ChannelDelete(&channel_id),
+        Event::ChannelDelete(channel_id),
     )
     .await?;
 

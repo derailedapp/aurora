@@ -14,13 +14,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use aurora_db::{
-    DBError, FromId, guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, user::User,
+    guild::Guild, guild_invite::GuildInvite, guild_member::GuildMember, user::User, DBError, FromId,
 };
 use axum::{
-    Json, Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     routing::{delete, patch, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
@@ -29,7 +29,7 @@ use sqlx::PgPool;
 use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
-    pubsub::{Event, publish},
+    pubsub::{publish, Event},
     state::OVTState,
     token::get_user,
 };
@@ -102,7 +102,12 @@ pub async fn create_guild(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(&mut state.redis, &user.id, Event::GuildCreate(&guild)).await?;
+    publish(
+        &mut state.redis,
+        &user.id,
+        Event::GuildCreate(guild.clone()),
+    )
+    .await?;
 
     tx.commit()
         .await
@@ -153,7 +158,7 @@ pub async fn modify_guild(
     publish(
         &mut state.redis,
         &guild.id,
-        Event::GuildUpdate(&modified_guild),
+        Event::GuildUpdate(modified_guild.clone()),
     )
     .await?;
 
@@ -179,7 +184,12 @@ pub async fn delete_guild(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(&mut state.redis, &user.id, Event::GuildDelete(&guild.id)).await?;
+    publish(
+        &mut state.redis,
+        &user.id,
+        Event::GuildDelete(guild.id.clone()),
+    )
+    .await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }
@@ -228,7 +238,7 @@ pub async fn use_invite(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-        publish(&mut state.redis, &guild.id, Event::MemberJoin(&user)).await?;
+        publish(&mut state.redis, &guild.id, Event::MemberJoin(user.clone())).await?;
 
         Ok(Json(guild))
     } else {
@@ -328,7 +338,7 @@ pub async fn leave_guild(
     .fetch_one(&state.pg)
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
-    publish(&mut state.redis, &guild.id, Event::MemberLeave(&mem)).await?;
+    publish(&mut state.redis, &guild.id, Event::MemberLeave(mem.clone())).await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }

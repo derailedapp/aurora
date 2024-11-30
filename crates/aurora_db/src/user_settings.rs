@@ -18,7 +18,7 @@ use sqlx::prelude::FromRow;
 
 use crate::{DBError, FromId, FromIdResult};
 
-#[derive(Serialize, FromRow)]
+#[derive(Serialize, FromRow, Clone)]
 pub struct UserSettings {
     pub id: String,
     pub theme: String,

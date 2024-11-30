@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use axum::{Json, http::StatusCode};
+use axum::{http::StatusCode, Json};
 use serde::Serialize;
 
 #[derive(Serialize)]

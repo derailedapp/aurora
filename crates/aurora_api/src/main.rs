@@ -26,6 +26,7 @@ mod channels;
 mod error;
 mod fanout;
 mod flags;
+mod gateway;
 mod guilds;
 mod messages;
 mod pubsub;
@@ -57,6 +58,7 @@ async fn main() {
         pg: pool,
         redis: conn,
         key: env::var("JWT_SECRET_KEY").unwrap(),
+        client,
     };
 
     let app = Router::new()

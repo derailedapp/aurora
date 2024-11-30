@@ -18,7 +18,7 @@ use sqlx::prelude::FromRow;
 
 use crate::{DBError, FromId, FromIdResult};
 
-#[derive(FromRow, Serialize, Deserialize)]
+#[derive(FromRow, Serialize, Deserialize, Clone)]
 pub struct Guild {
     pub id: String,
     pub owner_id: String,

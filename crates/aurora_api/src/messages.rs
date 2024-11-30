@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use aurora_db::{FromId, guild::Guild, message::Message};
+use aurora_db::{guild::Guild, message::Message, FromId};
 use axum::{
-    Json, Router,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     routing::{patch, post},
+    Json, Router,
 };
 use serde::Deserialize;
 use serde_valid::Validate;
@@ -28,7 +28,7 @@ use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
     guilds::verify_permissions,
-    pubsub::{Event, publish},
+    pubsub::{publish, Event},
     state::OVTState,
     token::get_user,
 };
@@ -119,7 +119,12 @@ pub async fn create_guild_channel_message(
         model.content
     ).fetch_one(&state.pg).await.map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(&mut state.redis, &guild.id, Event::MessageCreate(&message)).await?;
+    publish(
+        &mut state.redis,
+        &guild.id,
+        Event::MessageCreate(message.clone()),
+    )
+    .await?;
 
     Ok(Json(message))
 }
@@ -148,7 +153,12 @@ pub async fn modify_guild_channel_message(
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
     if let Some(msg) = message {
-        publish(&mut state.redis, &guild.id, Event::MessageModified(&msg)).await?;
+        publish(
+            &mut state.redis,
+            &guild.id,
+            Event::MessageModified(msg.clone()),
+        )
+        .await?;
 
         Ok(Json(msg))
     } else {
@@ -192,7 +202,12 @@ pub async fn delete_guild_channel_message(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(&mut state.redis, &guild.id, Event::MessageDelete(&message)).await?;
+    publish(
+        &mut state.redis,
+        &guild.id,
+        Event::MessageDelete(message.clone()),
+    )
+    .await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }

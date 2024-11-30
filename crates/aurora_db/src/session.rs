@@ -18,7 +18,7 @@ use sqlx::prelude::FromRow;
 
 use crate::{DBError, FromId, FromIdResult};
 
-#[derive(FromRow, Serialize)]
+#[derive(FromRow, Serialize, Clone)]
 pub struct Session {
     pub id: String,
     pub user_id: String,

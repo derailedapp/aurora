@@ -13,37 +13,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use aurora_db::{channel::Channel, guild::Guild, message::Message, user::User};
+use aurora_db::{
+    channel::Channel, guild::Guild, guild_member::GuildMember, message::Message, user::User,
+};
 use axum::{extract::Json, http::StatusCode};
 use redis::{aio::MultiplexedConnection, AsyncCommands};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{ErrorMessage, OVTError};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(tag = "t")]
-pub enum Event<'a> {
-    GuildCreate(&'a Guild),
-    GuildUpdate(&'a Guild),
-    GuildDelete(&'a str),
-    MemberJoin(&'a User),
-    MessageCreate(&'a Message),
-    MessageModified(&'a Message),
-    MessageDelete(&'a Message),
-    ChannelCreate(&'a Channel),
-    ChannelModified(&'a Channel),
-    ChannelDelete(&'a str),
+pub enum Event {
+    GuildCreate(Guild),
+    GuildUpdate(Guild),
+    GuildDelete(String),
+    MemberJoin(User),
+    MemberLeave(GuildMember),
+    MessageCreate(Message),
+    MessageModified(Message),
+    MessageDelete(Message),
+    ChannelCreate(Channel),
+    ChannelModified(Channel),
+    ChannelDelete(String),
 }
 
 pub async fn publish<'a>(
     conn: &mut MultiplexedConnection,
     channel: &str,
-    event: Event<'a>,
+    event: Event,
 ) -> Result<(), (StatusCode, Json<ErrorMessage>)> {
     let message =
         serde_json::to_string(&event).map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    let _: () = conn.publish(channel, &message)
+    let _: () = conn
+        .publish(channel, &message)
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 

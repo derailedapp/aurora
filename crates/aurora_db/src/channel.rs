@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 
 use crate::{DBError, FromId, FromIdResult};
 
-#[derive(FromRow, Serialize)]
+#[derive(FromRow, Serialize, Deserialize, Clone)]
 pub struct Channel {
     pub id: String,
     pub name: String,
