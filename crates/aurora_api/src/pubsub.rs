@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{ErrorMessage, OVTError};
 
 #[derive(Serialize, Deserialize, Clone)]
-#[serde(tag = "t")]
+#[serde(tag = "t", content = "d")]
 pub enum Event {
     GuildCreate(Guild),
     GuildUpdate(Guild),
@@ -38,7 +38,7 @@ pub enum Event {
     ChannelDelete(String),
 }
 
-pub async fn publish<'a>(
+pub async fn publish(
     conn: &mut MultiplexedConnection,
     channel: &str,
     event: Event,

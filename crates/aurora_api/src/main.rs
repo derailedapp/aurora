@@ -17,7 +17,11 @@
 
 use std::{env, time::Duration};
 
-use axum::Router;
+use axum::{routing::any, Router};
+use fanout::{Fanout, FANOUT};
+use futures_util::StreamExt;
+use pubsub::Event;
+use redis::aio::PubSub;
 use sqlx::postgres::PgPoolOptions;
 use state::OVTState;
 use tokio::net::TcpListener;
@@ -33,6 +37,37 @@ mod pubsub;
 mod state;
 mod token;
 mod users;
+
+pub async fn process_continuously(sub: PubSub) {
+    let (mut sink, mut stream) = sub.split();
+
+    let f_o = FANOUT
+        .get_or_init(|| tokio::sync::Mutex::new(Fanout::new()))
+        .lock()
+        .await;
+
+    for channel in f_o.channels.keys() {
+        sink.subscribe(channel.clone()).await.unwrap();
+    }
+
+    while let Some(msg) = stream.next().await {
+        let json = msg.get_payload_bytes();
+        let model: Event = serde_json::from_slice(json).unwrap();
+
+        let fo = FANOUT
+            .get_or_init(|| tokio::sync::Mutex::new(Fanout::new()))
+            .lock()
+            .await;
+
+        let c = fo.channels.get(msg.get_channel_name());
+
+        if let Some(senders) = c {
+            for sender in senders.iter() {
+                sender.send(model.clone()).unwrap();
+            }
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -53,12 +88,14 @@ async fn main() {
         .get_multiplexed_tokio_connection()
         .await
         .expect("can't connect to redis (2)");
+    let pubsub = client.get_async_pubsub().await.unwrap();
+
+    tokio::spawn(async move { process_continuously(pubsub).await });
 
     let state = OVTState {
         pg: pool,
         redis: conn,
         key: env::var("JWT_SECRET_KEY").unwrap(),
-        client,
     };
 
     let app = Router::new()
@@ -66,6 +103,7 @@ async fn main() {
         .merge(guilds::router())
         .merge(channels::router())
         .merge(messages::router())
+        .route("/gateway", any(gateway::handle_ws_request))
         .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:24635").await.unwrap();

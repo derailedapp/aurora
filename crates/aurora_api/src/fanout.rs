@@ -15,17 +15,19 @@
 
 //! A simple temporary system for message passing feeding from Redis to our WebSockets.
 
-use futures_util::StreamExt;
-use redis::aio::{PubSub, PubSubSink};
-use std::collections::BTreeMap;
-use tokio::sync::mpsc::Sender;
+use redis::aio::PubSubSink;
+use std::{collections::BTreeMap, sync::OnceLock};
+use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::Mutex;
 
 use crate::pubsub::Event;
+
+pub static FANOUT: OnceLock<Mutex<Fanout>> = OnceLock::new();
 
 pub struct Fanout {
     /// A btreemap with `channel_id` or `guild_id` as the key and a vec of
     /// tokio senders as the value.
-    pub channels: BTreeMap<String, Vec<Sender<Event>>>,
+    pub channels: BTreeMap<String, Vec<UnboundedSender<Event>>>,
     pub sink: Option<PubSubSink>,
 }
 
@@ -35,7 +37,7 @@ impl Default for Fanout {
     }
 }
 
-impl<'a> Fanout {
+impl Fanout {
     pub fn new() -> Self {
         Self {
             channels: BTreeMap::new(),
@@ -43,30 +45,7 @@ impl<'a> Fanout {
         }
     }
 
-    pub async fn process_continuously<'b>(&'b mut self, sub: PubSub) {
-        let (mut sink, mut stream) = sub.split();
-
-        for channel in self.channels.keys() {
-            sink.subscribe(channel.clone()).await.unwrap();
-        }
-
-        self.sink = Some(sink);
-
-        while let Some(msg) = stream.next().await {
-            let json = msg.get_payload_bytes();
-            let model: Event = serde_json::from_slice(json).unwrap();
-
-            let c = self.channels.get(msg.get_channel_name());
-
-            if let Some(senders) = c {
-                for sender in senders.iter() {
-                    sender.send(model.clone()).await.unwrap();
-                }
-            }
-        }
-    }
-
-    pub async fn add_sender<'b>(&'b mut self, channel: String, sender: Sender<Event>) {
+    pub async fn add_sender(&mut self, channel: String, sender: UnboundedSender<Event>) {
         let senders = self.channels.entry(channel.clone()).or_default();
 
         if Vec::is_empty(senders) {
@@ -80,7 +59,7 @@ impl<'a> Fanout {
         senders.push(sender);
     }
 
-    pub fn remove_sender(&mut self, channel: String, sender: Sender<Event>) {
+    pub fn remove_sender(&mut self, channel: String, sender: UnboundedSender<Event>) {
         let senders = self.channels.entry(channel).or_default();
 
         senders.remove(
