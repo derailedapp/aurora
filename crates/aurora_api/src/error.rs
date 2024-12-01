@@ -36,7 +36,6 @@ pub enum OVTError {
     GuildAlreadyJoined,
     InviteNotFound,
     InvalidPermissionBitflags,
-    ServerSentEvent,
 }
 
 impl OVTError {
@@ -124,13 +123,6 @@ impl OVTError {
                 Json(ErrorMessage {
                     message: "Invalid permission bit flags".to_string(),
                     code: 11,
-                }),
-            ),
-            Self::ServerSentEvent => (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorMessage {
-                    message: "Message only sent by server".to_string(),
-                    code: 12,
                 }),
             ),
         }

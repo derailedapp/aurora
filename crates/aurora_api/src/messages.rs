@@ -28,7 +28,7 @@ use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
     guilds::verify_permissions,
-    pubsub::{publish, Event},
+    pubsub::{publish_guild, Event},
     state::OVTState,
     token::get_user,
 };
@@ -100,7 +100,7 @@ pub struct CreateMessage {
 pub async fn create_guild_channel_message(
     headers: HeaderMap,
     Path((guild_id, channel_id)): Path<(String, String)>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
     Json(model): Json<CreateMessage>,
 ) -> Result<Json<Message>, (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
@@ -119,12 +119,7 @@ pub async fn create_guild_channel_message(
         model.content
     ).fetch_one(&state.pg).await.map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(
-        &mut state.redis,
-        &guild.id,
-        Event::MessageCreate(message.clone()),
-    )
-    .await?;
+    publish_guild(&guild.id, Event::MessageCreate(message.clone())).await?;
 
     Ok(Json(message))
 }
@@ -132,7 +127,7 @@ pub async fn create_guild_channel_message(
 pub async fn modify_guild_channel_message(
     headers: HeaderMap,
     Path((guild_id, channel_id, message_id)): Path<(String, String, String)>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
     Json(model): Json<CreateMessage>,
 ) -> Result<Json<Message>, (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
@@ -153,12 +148,7 @@ pub async fn modify_guild_channel_message(
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
     if let Some(msg) = message {
-        publish(
-            &mut state.redis,
-            &guild.id,
-            Event::MessageModified(msg.clone()),
-        )
-        .await?;
+        publish_guild(&guild.id, Event::MessageModified(msg.clone())).await?;
 
         Ok(Json(msg))
     } else {
@@ -169,7 +159,7 @@ pub async fn modify_guild_channel_message(
 pub async fn delete_guild_channel_message(
     headers: HeaderMap,
     Path((guild_id, channel_id, message_id)): Path<(String, String, String)>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
@@ -202,12 +192,7 @@ pub async fn delete_guild_channel_message(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(
-        &mut state.redis,
-        &guild.id,
-        Event::MessageDelete(message.clone()),
-    )
-    .await?;
+    publish_guild(&guild.id, Event::MessageDelete(message.clone())).await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }

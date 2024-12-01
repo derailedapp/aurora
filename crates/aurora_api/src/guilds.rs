@@ -30,7 +30,7 @@ use sqlx::PgPool;
 use crate::{
     error::{ErrorMessage, OVTError},
     flags::GuildPermissions,
-    pubsub::{publish, Event},
+    pubsub::{publish_guild, publish_user, Event},
     state::OVTState,
     token::get_user,
 };
@@ -70,7 +70,7 @@ pub struct CreateGuild {
 
 pub async fn create_guild(
     headers: HeaderMap,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
     Json(model): Json<CreateGuild>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
@@ -103,12 +103,7 @@ pub async fn create_guild(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(
-        &mut state.redis,
-        &actor.id,
-        Event::GuildCreate(guild.clone()),
-    )
-    .await?;
+    publish_user(&actor.id, Event::GuildCreate(guild.clone())).await?;
 
     tx.commit()
         .await
@@ -131,7 +126,7 @@ pub struct ModifyGuild {
 pub async fn modify_guild(
     headers: HeaderMap,
     Path(guild_id): Path<String>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
     Json(model): Json<ModifyGuild>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
@@ -156,12 +151,7 @@ pub async fn modify_guild(
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(
-        &mut state.redis,
-        &guild.id,
-        Event::GuildUpdate(modified_guild.clone()),
-    )
-    .await?;
+    publish_guild(&guild.id, Event::GuildUpdate(modified_guild.clone())).await?;
 
     Ok(Json(modified_guild))
 }
@@ -169,7 +159,7 @@ pub async fn modify_guild(
 pub async fn delete_guild(
     headers: HeaderMap,
     Path(guild_id): Path<String>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
@@ -185,12 +175,7 @@ pub async fn delete_guild(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-    publish(
-        &mut state.redis,
-        &actor.id,
-        Event::GuildDelete(guild.id.clone()),
-    )
-    .await?;
+    publish_guild(&guild.id, Event::GuildDelete(guild.id.clone())).await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }
@@ -205,7 +190,7 @@ pub struct ReturnedInvite {
 pub async fn use_invite(
     headers: HeaderMap,
     Path(invite_id): Path<String>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
 ) -> Result<Json<Guild>, (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
 
@@ -239,7 +224,7 @@ pub async fn use_invite(
         .await
         .map_err(|_| OVTError::InternalServerError.to_resp())?;
 
-        publish(&mut state.redis, &guild.id, Event::MemberJoin(actor)).await?;
+        publish_guild(&guild.id, Event::MemberJoin(actor)).await?;
 
         Ok(Json(guild))
     } else {
@@ -323,7 +308,7 @@ pub async fn delete_invite(
 pub async fn leave_guild(
     headers: HeaderMap,
     Path(guild_id): Path<String>,
-    State(mut state): State<OVTState>,
+    State(state): State<OVTState>,
 ) -> Result<(StatusCode, String), (StatusCode, Json<ErrorMessage>)> {
     let (actor, _) = get_user(&headers, &state.key, &state.pg).await?;
     let guild = Guild::from_id(&state.pg, guild_id)
@@ -339,7 +324,7 @@ pub async fn leave_guild(
     .fetch_one(&state.pg)
     .await
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
-    publish(&mut state.redis, &guild.id, Event::MemberLeave(mem.clone())).await?;
+    publish_guild(&guild.id, Event::MemberLeave(mem.clone())).await?;
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }

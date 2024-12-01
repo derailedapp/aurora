@@ -10,7 +10,6 @@ serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
 serde_valid = "0.25"
 regex = "1"
-redis = { version = "0.27.5", features = [ "tokio-native-tls-comp" ] }
 argon2 = "0.5"
 uuid7 = "1.1.0"
 jsonwebtoken = "9"
@@ -18,5 +17,6 @@ chrono = "0.4"
 dotenvy = "0.15"
 bitflags = "2"
 futures-util = "0.3"
+tower-http = { version = "0.6", features = [ "cors" ] }
 
 aurora_db = { path = "./crates/aurora_db" }

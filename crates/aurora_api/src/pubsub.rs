@@ -17,12 +17,11 @@ use aurora_db::{
     actor::Actor, channel::Channel, guild::Guild, guild_member::GuildMember, message::Message,
 };
 use axum::{extract::Json, http::StatusCode};
-use redis::{aio::MultiplexedConnection, AsyncCommands};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-use crate::error::{ErrorMessage, OVTError};
+use crate::error::ErrorMessage;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Clone)]
 #[serde(tag = "t", content = "d")]
 pub enum Event {
     GuildCreate(Guild),
@@ -38,18 +37,16 @@ pub enum Event {
     ChannelDelete(String),
 }
 
-pub async fn publish(
-    conn: &mut MultiplexedConnection,
-    channel: &str,
-    event: Event,
+pub async fn publish_user(
+    _user_id: &str,
+    _event: Event,
 ) -> Result<(), (StatusCode, Json<ErrorMessage>)> {
-    let message =
-        serde_json::to_string(&event).map_err(|_| OVTError::InternalServerError.to_resp())?;
+    Ok(())
+}
 
-    let _: () = conn
-        .publish(channel, &message)
-        .await
-        .map_err(|_| OVTError::InternalServerError.to_resp())?;
-
+pub async fn publish_guild(
+    _guild_id: &str,
+    _event: Event,
+) -> Result<(), (StatusCode, Json<ErrorMessage>)> {
     Ok(())
 }
