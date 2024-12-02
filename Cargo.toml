@@ -18,5 +18,9 @@ dotenvy = "0.15"
 bitflags = "2"
 futures-util = "0.3"
 tower-http = { version = "0.6", features = [ "cors" ] }
+prost = "0.13"
+prost-types = "0.13"
+tonic = "0.12"
+tonic-build = "0.12"
 
 aurora_db = { path = "./crates/aurora_db" }

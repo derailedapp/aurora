@@ -1,0 +1,10 @@
+[package]
+name = "aurora_protos"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tonic.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true
