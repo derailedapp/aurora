@@ -1,4 +1,4 @@
-**This is an outdated version of the Aurora Protocol. Derailed has moved over to GitLab, so [please check out Aurora there](https://gitlab.com/derailed/aurora).
+**This is an outdated version of the Aurora Protocol. Derailed has moved over to GitLab, so [please check out Aurora there](https://gitlab.com/derailed/aurora).**
 
 # Aurora
 
