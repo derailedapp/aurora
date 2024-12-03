@@ -1,8 +1,23 @@
-# Aurora
+# Derailed
 
-Conceptual protocol for decentralized communication via instant messaging and social networking.
+A social media where you're the platform. Constantly-evolving Protocol for Decentralized communication.
+Social networking, instant messaging, and more, pick your poison, and keep your data, yours.
 
-## Rust
+## Stack
 
-The reference implementation is built in Rust. We recommend using the latest nightly version of Rust
-since Aurora is developed inside of it. Aurora is not targeting to compile with Rust stable.
+- Aurora
+    Derailed's API and Database layer, made using Rust and Axum.
+
+    Aurora is the core of Derailed and holds the backbone of Decentralization
+    in Derailed.
+- Gateway
+    Derailed's WebSocket Gateway, made using Elixir and Cowboy.
+
+    The Gateway serves events and messages to users at lightning speeds and
+    is built on the highly-concurrent fault-tolerant Erlang BEAM VM.
+- Twilight
+    Derailed's Web & Mobile App, made using React Native and Expo.
+
+## License
+
+Derailed is completely open source. It is licensed under AGPL-3.0.
