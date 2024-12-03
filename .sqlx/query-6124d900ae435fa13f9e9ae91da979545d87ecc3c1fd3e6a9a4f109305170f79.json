@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM user_settings WHERE id = $1;",
+  "query": "SELECT * FROM guild_invites WHERE guild_id = $1;",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "theme",
+        "name": "guild_id",
         "type_info": "Text"
       }
     ],
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "3b4ad268817f5ee20e595eea85d3a13c67728762eb27d30a2553ca6829e0eb87"
+  "hash": "6124d900ae435fa13f9e9ae91da979545d87ecc3c1fd3e6a9a4f109305170f79"
 }

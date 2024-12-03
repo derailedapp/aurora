@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "SELECT * FROM accounts WHERE email = $1;",
   "describe": {
     "columns": [
       {
@@ -10,27 +10,22 @@
       },
       {
         "ordinal": 1,
-        "name": "server_id",
+        "name": "actor_id",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "guild_id",
+        "name": "email",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "password",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "last_message_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 5,
-        "name": "position",
+        "name": "flags",
         "type_info": "Int4"
       }
     ],
@@ -41,12 +36,11 @@
     },
     "nullable": [
       false,
-      true,
-      true,
       false,
       true,
-      false
+      true,
+      true
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "d5395614405e3c560030d456ed16da8f5b07c9a70ef7ce16438aec6317a0098b"
 }

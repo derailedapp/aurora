@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "INSERT INTO messages (id, author_id, channel_id, content) VALUES ($1, $2, $3, $4) RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -10,43 +10,34 @@
       },
       {
         "ordinal": 1,
-        "name": "server_id",
+        "name": "author_id",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "guild_id",
+        "name": "channel_id",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "content",
         "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
-        "name": "last_message_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 5,
-        "name": "position",
-        "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
+        "Text",
         "Text"
       ]
     },
     "nullable": [
       false,
       true,
-      true,
       false,
-      true,
       false
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "013dd5adad89418f51f4db57b3ba5f8cb2cbc38df0f01bb8d1cc1f92968f6e93"
 }

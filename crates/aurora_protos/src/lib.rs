@@ -1,1 +1,3 @@
-tonic::include_proto!("derailed.gateway");
+pub mod proto {
+    tonic::include_proto!("derailed.gateway");
+}

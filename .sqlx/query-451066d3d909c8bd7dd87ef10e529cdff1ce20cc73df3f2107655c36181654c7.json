@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM guild_invites WHERE id = $1 AND guild_id = $2;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "451066d3d909c8bd7dd87ef10e529cdff1ce20cc73df3f2107655c36181654c7"
+}

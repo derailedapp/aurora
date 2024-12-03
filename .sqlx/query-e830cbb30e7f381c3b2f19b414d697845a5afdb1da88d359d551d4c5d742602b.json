@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO user_settings (id, theme) VALUES ($1, 'dark')",
+  "query": "DELETE FROM messages WHERE id = $1;",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "ad922ca6d58033b2611226a620552c6d9905ad95284274a5bcef4ab84c11f538"
+  "hash": "e830cbb30e7f381c3b2f19b414d697845a5afdb1da88d359d551d4c5d742602b"
 }

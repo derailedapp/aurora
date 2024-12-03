@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "INSERT INTO guilds (id, owner_id, name, permissions) VALUES ($1, $2, $3, $4) RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -10,43 +10,40 @@
       },
       {
         "ordinal": 1,
-        "name": "server_id",
+        "name": "owner_id",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "guild_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
-        "name": "last_message_id",
+        "ordinal": 3,
+        "name": "server_id",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
-        "name": "position",
-        "type_info": "Int4"
+        "ordinal": 4,
+        "name": "permissions",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
       false,
-      true,
-      true,
+      false,
       false,
       true,
-      false
+      true
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "2ef1683dd6848c86b3485b9383a382d32dde137519fdf70601cfa5834cd9553b"
 }

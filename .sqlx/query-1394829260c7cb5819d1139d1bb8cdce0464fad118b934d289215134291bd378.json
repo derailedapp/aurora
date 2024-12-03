@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM users WHERE id = $1;",
+  "query": "UPDATE guilds SET name = $2 WHERE id = $1 RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -10,49 +10,38 @@
       },
       {
         "ordinal": 1,
-        "name": "username",
+        "name": "owner_id",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "display_name",
+        "name": "name",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "email",
+        "name": "server_id",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "password",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 5,
-        "name": "flags",
-        "type_info": "Int4"
-      },
-      {
-        "ordinal": 6,
-        "name": "server_id",
-        "type_info": "Text"
+        "name": "permissions",
+        "type_info": "Int8"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
     "nullable": [
       false,
       false,
-      true,
-      true,
-      true,
+      false,
       true,
       true
     ]
   },
-  "hash": "bf275e0f922d853f53005fd8f7040181caf8d5079c92f2d106cf64f818c94f83"
+  "hash": "1394829260c7cb5819d1139d1bb8cdce0464fad118b934d289215134291bd378"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "UPDATE channels SET name = $1, position = $2 WHERE id = $3 AND guild_id = $4 RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -36,6 +36,9 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Int4",
+        "Text",
         "Text"
       ]
     },
@@ -48,5 +51,5 @@
       false
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "5e4585c05cf2da88e2a9df61554c5bc061e854dc5df52454b28294eadc5633f8"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "SELECT * FROM actors WHERE id = $1;",
   "describe": {
     "columns": [
       {
@@ -15,23 +15,28 @@
       },
       {
         "ordinal": 2,
-        "name": "guild_id",
+        "name": "username",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "display_name",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "last_message_id",
+        "name": "avatar_url",
         "type_info": "Text"
       },
       {
         "ordinal": 5,
-        "name": "position",
-        "type_info": "Int4"
+        "name": "banner_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "bio",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -42,11 +47,12 @@
     "nullable": [
       false,
       true,
-      true,
       false,
       true,
-      false
+      true,
+      true,
+      true
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "f787cab6a65b94cc32a6c68e7983481ef960a1a1cd3b759900fbcad61d607830"
 }

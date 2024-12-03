@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "UPDATE messages SET content = $2 WHERE id = $1 AND author_id = $3 RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -10,43 +10,33 @@
       },
       {
         "ordinal": 1,
-        "name": "server_id",
+        "name": "author_id",
         "type_info": "Text"
       },
       {
         "ordinal": 2,
-        "name": "guild_id",
+        "name": "channel_id",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "content",
         "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
-        "name": "last_message_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 5,
-        "name": "position",
-        "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
         "Text"
       ]
     },
     "nullable": [
       false,
       true,
-      true,
       false,
-      true,
       false
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "d77505d5ac2d4f85526588e01bc6e739df976b65c1bf29efc3b2086379b21f35"
 }

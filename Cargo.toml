@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = ["crates/*", "gateway/apps/db/native/derailed_db"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = [ "full" ] }
@@ -22,5 +22,8 @@ prost = "0.13"
 prost-types = "0.13"
 tonic = "0.12"
 tonic-build = "0.12"
+rustler = "0.34.0"
 
+aurora_api = { path = "./crates/aurora_api" }
 aurora_db = { path = "./crates/aurora_db" }
+aurora_protos = { path = "./crates/aurora_protos" }

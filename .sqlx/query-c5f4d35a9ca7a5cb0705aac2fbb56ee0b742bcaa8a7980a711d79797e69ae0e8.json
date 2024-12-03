@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM channels WHERE id = $1;",
+  "query": "INSERT INTO channels (id, name, guild_id, position) VALUES ($1, $2, $3, 0) RETURNING *;",
   "describe": {
     "columns": [
       {
@@ -36,6 +36,8 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
+        "Text",
         "Text"
       ]
     },
@@ -48,5 +50,5 @@
       false
     ]
   },
-  "hash": "0b4df8624845363324ef16a6da79d7275c63593f1b09e851bf694ba865bb9c22"
+  "hash": "c5f4d35a9ca7a5cb0705aac2fbb56ee0b742bcaa8a7980a711d79797e69ae0e8"
 }

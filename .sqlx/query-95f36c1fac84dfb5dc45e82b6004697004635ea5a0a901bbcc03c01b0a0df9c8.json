@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO account_settings (id, theme) VALUES ($1, 'dark');",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "95f36c1fac84dfb5dc45e82b6004697004635ea5a0a901bbcc03c01b0a0df9c8"
+}
