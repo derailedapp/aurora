@@ -1,0 +1,17 @@
+[package]
+name = "derailed_db"
+version = "0.1.0"
+authors = []
+edition = "2021"
+
+[lib]
+name = "derailed_db"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler.workspace = true
+jsonwebtoken.workspace = true
+aurora_api.workspace = true
+dotenvy.workspace = true
+uuid7.workspace = true

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package derailed.gateway;
+
+service Gateway {
+    rpc send_user (Interchange) returns (google.protobuf.Empty);
+    //rpc send_channel (Interchange) returns (google.protobuf.Empty);
+    rpc send_guild (Interchange) returns (google.protobuf.Empty);
+}
+
+message Interchange {
+    string event_type = 1;
+    int64 receiver_id = 2;
+    string data = 3;
+}
