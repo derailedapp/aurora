@@ -13,26 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-defmodule Derailed.WebSocket.Cowboy do
-  def get_dispatch do
-    :cowboy_router.compile([
-      {:_,
-       [
-         {"/", Derailed.WebSocket, %{}}
-       ]}
-    ])
-  end
+defmodule Derailed.Contracts.Identify do
+  use Drops.Contract
 
-  def start_link do
-    {:ok, _} =
-      :cowboy.start_clear(
-        :derailed,
-        [{:port, 16657}],
-        %{
-          env: %{
-            dispatch: get_dispatch()
-          }
-        }
-      )
+  schema do
+    %{
+      required("token") => string()
+    }
   end
 end

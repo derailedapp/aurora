@@ -56,8 +56,8 @@ defmodule Derailed.Session do
     {_, result} =
       Postgrex.prepare_execute!(
         :db,
-        "get_channels_session_genserver",
-        "SELECT * FROM channels WHERE id IN (SELECT channel_id FROM channel_members WHERE user_id = $1);",
+        "get_guilds_session_genserver",
+        "SELECT * FROM guilds WHERE id IN (SELECT guild_id FROM guild_members WHERE user_id = $1);",
         [user_id]
       )
 
@@ -69,7 +69,7 @@ defmodule Derailed.Session do
         pid
       end)
 
-    guild_refs = Enum.map(guild_pids, fn c -> ZenMonitor.monitor(c) end)
+    guild_refs = Enum.map(guild_pids, fn c -> Process.monitor(c) end)
 
     {:ok,
      %{
@@ -93,19 +93,19 @@ defmodule Derailed.Session do
   def handle_cast(:send_ready, state) do
     Manifold.send(state[:ws_pid], {
       :event,
-      "HELLO",
+      "READY",
       %{
         relationships: state[:relationship_data],
         user: state[:user_data],
-        guilds: state[:guild_data],
-        _trace: %{
-          ws: inspect(state[:ws_pid]),
-          s: inspect(self()),
-          channels: inspect(state[:channel_pids])
-        }
+        guilds: state[:guild_data]
       }
     })
 
+    {:noreply, state}
+  end
+
+  def handle_info({:event, :guild, type, data}, state) do
+    Manifold.send(state[:ws_pid], {:event, type, data})
     {:noreply, state}
   end
 

@@ -82,7 +82,7 @@ defmodule Derailed.Guild do
   end
 
   def handle_call({:send, type, data}, _from, state) do
-    Manifold.send(state[:session_pids], {:event, :channel, type, data})
+    Manifold.send(state[:session_pids], {:event, :guild, type, data})
     {:reply, :ok, state}
   end
 
@@ -94,6 +94,7 @@ defmodule Derailed.Guild do
   # TODO: handle distribution, `pid` would be `{name, node}`
   def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
     m = MapSet.delete(state.session_pids, pid)
+
     if Enum.empty?(m) do
       {:stop, :no_subscribers, state}
     else

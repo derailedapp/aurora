@@ -30,7 +30,8 @@ defmodule Derailed.Session.MixProject do
       {:guilds, in_umbrella: true},
       {:gen_registry, "~> 1.3.0"},
       {:postgrex, "~> 0.19"},
-      {:manifold, "~> 1.0"}
+      {:manifold, "~> 1.0"},
+      {:jason, "~> 1.4"}
     ]
   end
 end

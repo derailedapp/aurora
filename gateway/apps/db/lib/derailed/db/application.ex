@@ -23,9 +23,13 @@ defmodule Derailed.DB.Application do
 
   @impl true
   def start(_type, _args) do
-    source!(["../.env", ".env", System.get_env()])
+    # NOTE: this is here mostly because of LSP.
+    # source! returns a map, but otherwise it has no_return
+    # no setting a variable here means it *is* the map one and implies success.
+    _ = source!(["../.env", ".env", System.get_env()])
 
-    uri = parse(env!("DATABASE_URL"))
+    url = env!("DATABASE_URL")
+    uri = parse(url)
     uri = Keyword.put(uri, :name, :db)
 
     children = [

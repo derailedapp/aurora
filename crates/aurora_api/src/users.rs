@@ -101,8 +101,8 @@ pub async fn register(
     .map_err(|_| OVTError::InternalServerError.to_resp())?;
     sqlx::query!(
         "INSERT INTO sessions (id, user_id) VALUES ($1, $2);",
-        &user_id,
-        &session_id
+        &session_id,
+        &user_id
     )
     .execute(&mut *tx)
     .await

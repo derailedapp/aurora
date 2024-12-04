@@ -27,11 +27,12 @@ defmodule Derailed.WebSocket.MixProject do
   defp deps do
     [
       {:cowboy, "~> 2.12"},
-      {:jsonrs, github: "derailedapp/jsonrs"},
+      {:jason, "~> 1.4"},
       {:dotenvy, "~> 0.9"},
       {:postgrex, "~> 0.19"},
-      {:nanoid, "~> 2.1"},
-      {:sessions, in_umbrella: true}
+      {:drops, "~> 0.2.0"},
+      {:sessions, in_umbrella: true},
+      {:db, in_umbrella: true}
     ]
   end
 end

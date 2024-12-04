@@ -15,7 +15,7 @@
 
 use aurora_api::token::Claims;
 use jsonwebtoken::DecodingKey;
-use rustler::{Env, Error, Term};
+use rustler::{types::tuple::make_tuple, Encoder, Env, Error, Term};
 
 mod atoms {
     rustler::atoms! {
@@ -31,14 +31,14 @@ fn load(_: Env, _: Term) -> bool {
 }
 
 #[rustler::nif]
-fn get_token_session_id(token: String) -> Result<String, Error> {
+fn get_token_session_id(env: Env, token: String) -> Result<Term, Error> {
     let claims = Claims::from_token(
         &token,
-        &DecodingKey::from_secret(std::env::var("JWT_SECRET").unwrap().as_bytes()),
+        &DecodingKey::from_secret(std::env::var("JWT_SECRET_KEY").unwrap().as_bytes()),
     );
 
     if let Ok(c) = claims {
-        Ok(c.sub)
+        Ok(make_tuple(env, &[atoms::ok().to_term(env), c.sub.encode(env)]))
     } else {
         Err(Error::Term(Box::new(atoms::invalid_token())))
     }

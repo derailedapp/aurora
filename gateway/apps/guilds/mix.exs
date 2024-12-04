@@ -27,7 +27,6 @@ defmodule Derailed.Guild.MixProject do
   defp deps do
     [
       {:db, in_umbrella: true},
-      {:zen_monitor, "~> 2.1.0"},
       {:gen_registry, "~> 1.3.0"},
       {:postgrex, "~> 0.19"},
       {:manifold, "~> 1.0"}
