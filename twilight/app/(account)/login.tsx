@@ -18,6 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import * as React from "react";
 import { View, Text, TextInput, Button, Pressable } from "react-native";
 import { Controller, useForm } from "react-hook-form";
+import { loginUser } from "@/lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 export default function Login() {
   const {
@@ -31,7 +34,16 @@ export default function Login() {
     },
   });
 
-  const onSubmit = async (data: { password: string; email: string }) => {};
+  const router = useRouter();
+
+  const onSubmit = async (data: { password: string; email: string }) => {
+    const resp = await loginUser(data.password, data.email);
+
+    const d = await resp.json();
+    await AsyncStorage.setItem("token", d.token);
+    // @ts-ignore
+    router.push("/users/(accounts)/@me");
+  };
 
   return (
     <View className="bg-white dark:bg-not-quite-dark-blue flex flex-col justify-center items-center h-screen">

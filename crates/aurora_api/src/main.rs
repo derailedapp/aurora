@@ -58,11 +58,11 @@ async fn main() {
         .allow_origin(Any);
 
     let app = Router::new()
-        .layer(cors)
         .merge(users::router())
         .merge(guilds::router())
         .merge(channels::router())
         .merge(messages::router())
+        .layer(cors)
         .with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:24635").await.unwrap();
