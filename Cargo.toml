@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "gateway/apps/db/native/derailed_db"]
+members = ["raildepot"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = [ "full" ] }
 axum = { version = "0.7", features = [ "ws" ] }
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "postgres", "macros", "chrono" ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "sqlite", "macros", "chrono" ] }
 serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
 serde_valid = "0.25"
@@ -18,12 +18,6 @@ dotenvy = "0.15"
 bitflags = "2"
 futures-util = "0.3"
 tower-http = { version = "0.6", features = [ "cors" ] }
-prost = "0.13"
-prost-types = "0.13"
-tonic = "0.12"
-tonic-build = "0.12"
-rustler = "0.34.0"
-
-aurora_api = { path = "./crates/aurora_api" }
-aurora_db = { path = "./crates/aurora_db" }
-aurora_protos = { path = "./crates/aurora_protos" }
+hickory-client = "0.24.1"
+nanoid = "0.4"
+vodozemac = "0.8"

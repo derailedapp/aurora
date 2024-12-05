@@ -5,19 +5,8 @@ Social networking, instant messaging, and more, pick your poison, and keep your 
 
 ## Stack
 
-- Aurora
-    Derailed's API and Database layer, made using Rust and Axum.
-
-    Aurora is the core of Derailed and holds the backbone of Decentralization
-    in Derailed.
-- Gateway
-    Derailed's WebSocket Gateway, made using Elixir and Cowboy.
-
-    The Gateway serves events and messages to users at lightning speeds and
-    is built on the highly-concurrent fault-tolerant Erlang BEAM VM.
-- Twilight
-    Derailed's Web & Mobile App, made using React Native and Expo.
+TODO
 
 ## License
 
-Derailed is completely open source. It is licensed under AGPL-3.0.
+Derailed is completely open source. It is licensed under Apache-2.0.
