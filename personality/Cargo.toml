@@ -1,0 +1,22 @@
+[package]
+name = "personality"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio.workspace = true
+axum.workspace = true
+sqlx.workspace = true
+vodozemac.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_valid.workspace = true
+raildepot.workspace = true
+thiserror.workspace = true
+axum_thiserror.workspace = true
+argon2.workspace = true
+jsonwebtoken.workspace = true
+uuid7.workspace = true
+regex.workspace = true
+dotenvy.workspace = true
+tower-http.workspace = true

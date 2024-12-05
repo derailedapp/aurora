@@ -13,26 +13,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::Serialize;
-use sqlx::prelude::FromRow;
+use raildepot::{CreateId, Identifier};
+use vodozemac::Ed25519PublicKey;
 
-use crate::{DBError, FromId, FromIdResult};
+use crate::state::State;
 
-#[derive(Serialize, FromRow, Clone)]
-pub struct AccountSettings {
-    pub id: String,
-    pub theme: String,
-}
-
-impl FromId<String> for AccountSettings {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(
-            AccountSettings,
-            "SELECT * FROM account_settings WHERE id = $1;",
-            id
-        )
-        .fetch_one(db)
+pub async fn create_identifier(state: &State, public_key: Ed25519PublicKey) -> String {
+    let mut public_keys = Vec::new();
+    public_keys.push(public_key.to_base64());
+    // TODO: handle error
+    let req = state
+        .client
+        .post("")
+        .json(&CreateId {
+            public_keys,
+            server: state.server.clone(),
+        })
+        .send()
         .await
-        .map_err(|_| DBError::RowNotFound)
-    }
+        .unwrap();
+    let json = req.json::<Identifier>().await.unwrap();
+    json.id
 }

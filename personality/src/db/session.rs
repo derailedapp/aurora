@@ -13,29 +13,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
+use serde::Serialize;
+use sqlx::{SqlitePool, prelude::FromRow};
+use uuid7::uuid7;
 
-use crate::{DBError, FromId, FromIdResult};
+use crate::error::Error;
 
-#[derive(FromRow, Serialize, Deserialize, Clone)]
-pub struct Guild {
+use super::account::Account;
+
+#[derive(FromRow, Serialize, Clone)]
+pub struct Session {
     pub id: String,
-    pub owner_id: String,
-    pub name: String,
-    #[sqlx(default)]
-    #[serde(skip_serializing)]
-    pub server_id: Option<String>,
-    #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub permissions: Option<i64>,
+    pub account_id: String,
 }
 
-impl FromId<String> for Guild {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(Guild, "SELECT * FROM guilds WHERE id = $1;", id)
-            .fetch_one(db)
-            .await
-            .map_err(|_| DBError::RowNotFound)
+impl Session {
+    pub async fn from_account(account: &Account, db: &SqlitePool) -> Result<Self, Error> {
+        let id = uuid7().to_string();
+        Ok(sqlx::query_as!(
+            Session,
+            "INSERT INTO sessions (id, account_id) VALUES ($1, $2) RETURNING *;",
+            id,
+            account.id
+        )
+        .fetch_one(db)
+        .await?)
     }
 }

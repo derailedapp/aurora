@@ -1,4 +1,20 @@
+// Copyright (C) 2024 V.J. De Chico
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use std::time::Duration;
+mod error;
 
 use axum::{
     Json,
@@ -8,87 +24,83 @@ use axum::{
     response::IntoResponse,
     routing::post,
 };
+use error::Error;
 use nanoid::nanoid;
-use serde::{Deserialize, Serialize};
+use raildepot::{CreateId, Identifier, PushPublicKeys};
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
-use vodozemac::{Ed25519PublicKey, Ed25519Signature, KeyError};
+use vodozemac::{Ed25519PublicKey, Ed25519Signature};
 
-/// The full amount of data represented by the identifier.
-#[derive(Serialize)]
-struct Identifier {
-    /// A unique ID used to identify a user, lodge, or guild
-    id: String,
-    /// A set of unique (to this context) IDs used for verifying actions by this identifier
-    public_keys: Vec<String>,
-    /// A domain handle which has a TXT record `_depot` which contains `id`
-    handle: Option<String>,
-}
+async fn verify_server_key(
+    client: &reqwest::Client,
+    body: Bytes,
+    signature: String,
+    server: &str,
+) -> Result<(), Error> {
+    let resp = client
+        .get("http://".to_string() + server + "/public-keys")
+        .send()
+        .await;
+    if let Ok(resp) = resp {
+        let d = resp.text().await;
+        if let Ok(d) = d {
+            vodozemac::Ed25519PublicKey::from_base64(&d)?
+                .verify(&body, &Ed25519Signature::from_base64(&signature)?)?;
 
-#[derive(Deserialize)]
-struct CreateId {
-    /// list of ed25519 public keys.
-    public_keys: Vec<String>,
+            return Ok(());
+        }
+    }
+    Err(Error::NoSignature)
 }
 
 async fn create_id(
-    State(db): State<SqlitePool>,
-    Json(model): Json<CreateId>,
-) -> Result<(StatusCode, Json<Identifier>), (StatusCode, String)> {
+    headers: HeaderMap,
+    State((db, client)): State<(SqlitePool, reqwest::Client)>,
+    body: Bytes,
+) -> Result<(StatusCode, Json<Identifier>), Error> {
+    let model: CreateId = serde_json::from_slice(&body)?;
+
     if model.public_keys.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Must include public keys".to_string(),
-        ));
+        return Err(Error::PublicKeysEmpty);
     }
+
+    if std::env::var("DEPOT_DEV").is_err() && model.server.starts_with("localhost") {
+        return Err(Error::LocalhostInvalid);
+    }
+
+    let sig = headers.get("X-Depot-Signature");
+
+    if sig.is_none() {
+        return Err(Error::NoSignature);
+    }
+
+    verify_server_key(
+        &client,
+        body,
+        sig.unwrap().to_str().unwrap().to_string(),
+        &model.server,
+    )
+    .await?;
 
     let id = nanoid!();
 
-    let mut tx = db.begin().await.map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error".to_string(),
-        )
-    })?;
+    let mut tx = db.begin().await?;
     sqlx::query!("INSERT INTO identifiers (id) VALUES ($1);", id)
         .execute(&mut *tx)
-        .await
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            )
-        })?;
+        .await?;
     for key in model.public_keys.iter() {
-        Ed25519PublicKey::from_base64(key).map_err(|err| match err {
-            KeyError::Base64Error(_) => (StatusCode::BAD_REQUEST, "Invalid public key".to_string()),
-            _ => (
-                StatusCode::BAD_REQUEST,
-                "Invalid public key or internal server error".to_string(),
-            ),
-        })?;
+        Ed25519PublicKey::from_base64(key)?;
         sqlx::query!(
             "INSERT INTO public_keys (id, key) VALUES ($1, $2);",
             id,
             key
         )
         .execute(&mut *tx)
-        .await
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            )
-        })?;
+        .await?;
     }
 
-    tx.commit().await.map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal Server Error".to_string(),
-        )
-    })?;
+    tx.commit().await?;
 
     Ok((
         StatusCode::CREATED,
@@ -96,51 +108,37 @@ async fn create_id(
             id,
             public_keys: model.public_keys,
             handle: None,
+            server: model.server,
         }),
     ))
 }
 
 async fn get_public_keys(
-    State(db): State<SqlitePool>,
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
     Path(id): Path<String>,
-) -> Result<Json<Vec<String>>, (StatusCode, String)> {
+) -> Result<Json<Vec<String>>, Error> {
     let keys_recs = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
         .fetch_all(&db)
-        .await
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            )
-        })?;
+        .await?;
     let keys: Vec<String> = keys_recs.into_iter().map(|r| r.key).collect();
 
     Ok(Json(keys))
 }
 
-#[derive(Deserialize)]
-struct PushPublicKeys {
-    /// list of ed25519 public keys.
-    public_keys: Vec<String>,
-    /// A timestamp with maximum jitter of one minute
-    ts: i64,
-}
-
 async fn push_public_keys(
     headers: HeaderMap,
-    State(db): State<SqlitePool>,
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
     Path(id): Path<String>,
     body: Bytes,
-) -> Result<(StatusCode, impl IntoResponse), (StatusCode, String)> {
+) -> Result<(StatusCode, impl IntoResponse), Error> {
     // NOTE: really annoying but we have to do JSON validation ourself here
     // because `body` and `Json(model)` can't coexist in Axum land.
-    let model: PushPublicKeys = serde_json::from_slice(&body)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid JSON object".to_string()))?;
+    let model: PushPublicKeys = serde_json::from_slice(&body)?;
 
     let dt = chrono::DateTime::from_timestamp_millis(model.ts).unwrap_or_default();
 
     if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
-        return Err((StatusCode::BAD_REQUEST, "Invalid timestamp".to_string()));
+        return Err(Error::InvalidTimestamp);
     }
 
     let sig = headers.get("X-Depot-Signature");
@@ -148,29 +146,17 @@ async fn push_public_keys(
     if let Some(sig) = sig {
         let public_keys = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
             .fetch_all(&db)
-            .await
-            .map_err(|_| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Internal Server Error".to_string(),
-                )
-            })?;
+            .await?;
         let keys: Vec<String> = public_keys.into_iter().map(|r| r.key).collect();
 
         let mut verified = false;
 
         for key in keys {
-            let k = Ed25519PublicKey::from_base64(&key).unwrap();
+            let k = Ed25519PublicKey::from_base64(&key)?;
 
             if let Ok(()) = k.verify(
                 &body,
-                &Ed25519Signature::from_base64(sig.to_str().map_err(|_| {
-                    (
-                        StatusCode::UNAUTHORIZED,
-                        "Invalid header contents".to_string(),
-                    )
-                })?)
-                .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid signature".to_string()))?,
+                &Ed25519Signature::from_base64(sig.to_str().unwrap())?,
             ) {
                 verified = true;
                 break;
@@ -178,52 +164,25 @@ async fn push_public_keys(
         }
 
         if !verified {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                "No public keys match signature given".to_string(),
-            ));
+            return Err(Error::BadSignature);
         }
 
-        let mut tx = db.begin().await.map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            )
-        })?;
+        let mut tx = db.begin().await?;
 
         for key in model.public_keys.iter() {
-            Ed25519PublicKey::from_base64(key).map_err(|err| match err {
-                KeyError::Base64Error(_) => {
-                    (StatusCode::BAD_REQUEST, "Invalid public key".to_string())
-                }
-                _ => (
-                    StatusCode::BAD_REQUEST,
-                    "Invalid public key or internal server error".to_string(),
-                ),
-            })?;
+            Ed25519PublicKey::from_base64(key)?;
             sqlx::query!(
                 "INSERT INTO public_keys (id, key) VALUES ($1, $2);",
                 id,
                 key
             )
             .execute(&mut *tx)
-            .await
-            .map_err(|_| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Internal Server Error".to_string(),
-                )
-            })?;
+            .await?;
         }
 
-        tx.commit().await.map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal Server Error".to_string(),
-            )
-        })?;
+        tx.commit().await?;
     } else {
-        return Err((StatusCode::UNAUTHORIZED, "No signature".to_string()));
+        return Err(Error::NoSignature);
     }
 
     Ok((StatusCode::NO_CONTENT, "".to_string()))
@@ -252,7 +211,7 @@ async fn main() {
         .route("/", post(create_id))
         .route("/:id/keys", post(push_public_keys).get(get_public_keys))
         .layer(cors)
-        .with_state(db);
+        .with_state((db, reqwest::Client::new()));
 
     // keep consistency with port numbers
     let listener = TcpListener::bind("0.0.0.0:24650").await.unwrap();

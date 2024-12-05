@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["raildepot"]
+members = [ "./personality", "./raildepot" ]
 
 [workspace.dependencies]
 tokio = { version = "1", features = [ "full" ] }
-axum = { version = "0.7", features = [ "ws" ] }
+axum = { version = "0.7", features = [ "macros" ] }
 sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "sqlite", "macros", "chrono" ] }
 serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
@@ -18,6 +18,11 @@ dotenvy = "0.15"
 bitflags = "2"
 futures-util = "0.3"
 tower-http = { version = "0.6", features = [ "cors" ] }
-hickory-client = "0.24.1"
 nanoid = "0.4"
 vodozemac = "0.8"
+reqwest = { version = "0.12", features = ["json"] }
+thiserror = "2"
+axum_thiserror = "0.1.0"
+
+personality = { path = "./personality" }
+raildepot = { path = "./raildepot" }

@@ -5,7 +5,14 @@ Social networking, instant messaging, and more, pick your poison, and keep your 
 
 ## Stack
 
-TODO
+- Rail Depot
+    TODO
+
+- Personality
+    TODO
+
+- Geniality
+    TODO
 
 ## License
 

@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS identifiers (
-    id TEXT PRIMARY KEY,
-    handle TEXT
+    id TEXT NOT NULL PRIMARY KEY,
+    handle TEXT,
+    server TEXT
 );
 CREATE TABLE IF NOT EXISTS public_keys (
     id TEXT NOT NULL,

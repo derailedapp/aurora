@@ -14,31 +14,30 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 use sqlx::prelude::FromRow;
 
-use crate::{DBError, FromId, FromIdResult};
+use crate::db::account::Account;
+use crate::error::Error;
 
-#[derive(FromRow, Serialize, Deserialize, Clone)]
-pub struct Channel {
+#[derive(Serialize, Deserialize, FromRow, Clone)]
+pub struct Actor {
     pub id: String,
-    pub name: String,
-    #[sqlx(default)]
-    #[serde(skip_serializing)]
-    pub server_id: Option<String>,
-    #[sqlx(default)]
-    #[serde(default)]
-    pub guild_id: Option<String>,
-    #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_message_id: Option<String>,
-    pub position: i32,
+    pub display_name: Option<String>,
+    pub avatar: Option<String>,
+    pub banner: Option<String>,
+    pub bio: Option<String>,
+    pub status: Option<String>,
 }
 
-impl FromId<String> for Channel {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(Channel, "SELECT * FROM channels WHERE id = $1;", id)
-            .fetch_one(db)
-            .await
-            .map_err(|_| DBError::RowNotFound)
+impl Actor {
+    pub async fn from_account(account: &Account, db: &SqlitePool) -> Result<Self, Error> {
+        Ok(sqlx::query_as!(
+            Actor,
+            "INSERT INTO actors (id) VALUES ($1) RETURNING *",
+            account.id,
+        )
+        .fetch_one(db)
+        .await?)
     }
 }

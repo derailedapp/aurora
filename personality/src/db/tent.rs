@@ -13,28 +13,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
+use std::env;
 
-use crate::{DBError, FromId, FromIdResult};
+use sqlx::migrate;
+use sqlx::{Sqlite, SqlitePool, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
-#[derive(Serialize, Deserialize, FromRow, Clone)]
-pub struct Actor {
-    pub id: String,
-    pub server_id: Option<String>,
-    // @vincentrps@example.com
-    pub username: String,
-    pub display_name: Option<String>,
-    pub avatar_url: Option<String>,
-    pub banner_url: Option<String>,
-    pub bio: Option<String>,
-}
+use crate::error::Error;
 
-impl FromId<String> for Actor {
-    async fn from_id(db: &sqlx::PgPool, id: String) -> FromIdResult<Self> {
-        sqlx::query_as!(Actor, "SELECT * FROM actors WHERE id = $1;", id)
-            .fetch_one(db)
-            .await
-            .map_err(|_| DBError::RowNotFound)
+pub async fn get_user_db(id: &str) -> Result<SqlitePool, Error> {
+    let uri = "sqlite:/".to_string()
+        + &env::var("BASE_DB_PATH").expect("Couldn't find a path for SQLite database store")
+        + "/"
+        + id;
+    let exists = Sqlite::database_exists(&uri).await?;
+
+    if !exists {
+        Sqlite::create_database(&uri).await?;
     }
+
+    let pool = SqlitePoolOptions::new().connect(&uri).await?;
+    migrate!("./migrations").run(&pool).await?;
+    Ok(pool)
 }
