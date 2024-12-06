@@ -22,6 +22,7 @@ pub struct CreateId {
     pub public_keys: Vec<String>,
     #[validate(pattern = r"^(?:localhost|(?:[a-z0-9-]+\.)+[a-z]{2,})(?::\d{1,5})?$")]
     pub server: String,
+    pub ts: i64,
 }
 
 #[derive(Serialize, Deserialize)]

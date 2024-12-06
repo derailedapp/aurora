@@ -24,6 +24,7 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use chrono::Utc;
 use error::Error;
 use nanoid::nanoid;
 use raildepot::{CreateId, DeleteIdentifier, Identifier, PushPublicKeys};
@@ -63,6 +64,12 @@ async fn create_id(
 
     if model.public_keys.is_empty() {
         return Err(Error::PublicKeysEmpty);
+    }
+
+    let dt = Utc::now();
+
+    if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
+        return Err(Error::InvalidTimestamp);
     }
 
     if std::env::var("DEPOT_DEV").is_err() && model.server.starts_with("localhost") {
@@ -170,7 +177,7 @@ async fn push_public_keys(
     // because `body` and `Json(model)` can't coexist in Axum land.
     let model: PushPublicKeys = serde_json::from_slice(&body)?;
 
-    let dt = chrono::DateTime::from_timestamp_millis(model.ts).unwrap_or_default();
+    let dt = Utc::now();
 
     if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
         return Err(Error::InvalidTimestamp);
@@ -233,7 +240,7 @@ async fn kill_identifier(
     // because `body` and `Json(model)` can't coexist in Axum land.
     let model: DeleteIdentifier = serde_json::from_slice(&body)?;
 
-    let dt = chrono::DateTime::from_timestamp_millis(model.ts).unwrap_or_default();
+    let dt = Utc::now();
 
     if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
         return Err(Error::InvalidTimestamp);

@@ -1595,6 +1595,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde",
+ "serde_json",
  "serde_valid",
  "sqlx",
  "thiserror 2.0.4",

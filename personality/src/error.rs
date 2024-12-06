@@ -17,6 +17,14 @@ pub enum Error {
 
     #[error("Internal Server Error")]
     #[status(500)]
+    ReqwestError(#[from] reqwest::Error),
+
+    #[error("Internal Server Error")]
+    #[status(500)]
+    VodoError(#[from] vodozemac::KeyError),
+
+    #[error("Internal Server Error")]
+    #[status(500)]
     FailedPasswordHash,
 
     #[error("Internal Server Error")]

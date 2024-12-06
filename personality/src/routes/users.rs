@@ -8,11 +8,10 @@ use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use sqlx::types::chrono;
+use vodozemac::Ed25519SecretKey;
 
 use crate::{
-    db::{account::Account, actor::Actor, session::Session, tent::delete_user_db},
-    error::Error,
-    token::{get_user, Claims},
+    db::{account::Account, actor::Actor, session::Session, tent::delete_user_db}, depot::delete_identifier, error::Error, token::{get_user, Claims}
 };
 
 #[derive(Deserialize, Validate)]
@@ -75,6 +74,7 @@ pub async fn delete_user(
 
     argon2.verify_password(model.password.as_bytes(), &PasswordHash::new(&account.password).map_err(|_| Error::Argon2Error)?).map_err(|_| Error::Argon2Error)?;
 
+    delete_identifier(&state, &account.id, Ed25519SecretKey::from_base64(&account.ed_key)?).await?;
     delete_user_db(&account.id).await?;
 
     Ok("".to_string())

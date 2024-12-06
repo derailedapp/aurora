@@ -20,3 +20,4 @@ uuid7.workspace = true
 regex.workspace = true
 dotenvy.workspace = true
 tower-http.workspace = true
+serde_json.workspace = true
