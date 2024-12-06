@@ -22,7 +22,7 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, Method, StatusCode},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use error::Error;
 use nanoid::nanoid;
@@ -125,6 +125,26 @@ async fn get_public_keys(
     Ok(Json(keys))
 }
 
+async fn get_identifier(
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
+    Path(id): Path<String>,
+) -> Result<Json<Identifier>, Error> {
+    let id_rec = sqlx::query!("SELECT * FROM identifiers WHERE id = $1;", id)
+        .fetch_one(&db)
+        .await?;
+    let keys_recs = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
+        .fetch_all(&db)
+        .await?;
+    let public_keys: Vec<String> = keys_recs.into_iter().map(|r| r.key).collect();
+
+    Ok(Json(Identifier {
+        id: id_rec.id,
+        public_keys,
+        handle: id_rec.handle,
+        server: id_rec.server,
+    }))
+}
+
 async fn push_public_keys(
     headers: HeaderMap,
     State((db, _)): State<(SqlitePool, reqwest::Client)>,
@@ -209,6 +229,7 @@ async fn main() {
 
     let app = axum::Router::new()
         .route("/", post(create_id))
+        .route("/:id", get(get_identifier))
         .route("/:id/keys", post(push_public_keys).get(get_public_keys))
         .layer(cors)
         .with_state((db, reqwest::Client::new()));

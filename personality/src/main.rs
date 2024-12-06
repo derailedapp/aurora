@@ -37,9 +37,6 @@ pub async fn get_public_keys(axum::extract::State(state): axum::extract::State<S
 async fn main() {
     dotenvy::dotenv().unwrap();
 
-    let db_connection_str = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:1234@localhost".to_string());
-
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::PATCH])
         .allow_headers(Any)

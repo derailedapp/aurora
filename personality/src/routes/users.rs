@@ -1,19 +1,18 @@
 use std::time::Duration;
 
 use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier
 };
-use axum::{Json, extract::State, routing::post};
+use axum::{extract::State, http::HeaderMap, routing::{delete, post}, Json};
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use sqlx::types::chrono;
 
 use crate::{
-    db::{account::Account, actor::Actor, session::Session},
+    db::{account::Account, actor::Actor, session::Session, tent::delete_user_db},
     error::Error,
-    token::Claims,
+    token::{get_user, Claims},
 };
 
 #[derive(Deserialize, Validate)]
@@ -60,6 +59,29 @@ pub async fn create_user(
     Ok(Json(TokenResult { token }))
 }
 
+#[derive(Deserialize, Validate)]
+pub struct DeleteUser {
+    password: String,
+}
+
+pub async fn delete_user(
+    headers: HeaderMap,
+    State(state): State<crate::state::State>,
+    Json(model): Json<DeleteUser>
+) -> Result<String, Error> {
+    let (_, account, _) = get_user(&headers, &state.jwt_secret).await?;
+
+    let argon2 = Argon2::default();
+
+    argon2.verify_password(model.password.as_bytes(), &PasswordHash::new(&account.password).map_err(|_| Error::Argon2Error)?).map_err(|_| Error::Argon2Error)?;
+
+    delete_user_db(&account.id).await?;
+
+    Ok("".to_string())
+}
+
 pub fn router() -> axum::Router<crate::state::State> {
-    axum::Router::new().route("/users", post(create_user))
+    axum::Router::new()
+        .route("/users", post(create_user))
+        .route("/users/@me", delete(delete_user))
 }

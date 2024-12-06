@@ -1,5 +1,6 @@
 use reqwest::header::ToStrError;
 
+
 #[derive(thiserror::Error, Debug, axum_thiserror::ErrorStatus)]
 pub enum Error {
     #[error("Internal Server Error")]
@@ -18,6 +19,10 @@ pub enum Error {
     #[status(500)]
     FailedPasswordHash,
 
+    #[error("Internal Server Error")]
+    #[status(500)]
+    DatabaseNotExists,
+
     #[error("Invalid Token")]
     #[status(401)]
     InvalidToken(#[from] jsonwebtoken::errors::Error),
@@ -29,4 +34,8 @@ pub enum Error {
     #[error("Expired session")]
     #[status(401)]
     ExpiredSession,
+
+    #[error("Invalid email or password")]
+    #[status(401)]
+    Argon2Error
 }

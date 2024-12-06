@@ -1,5 +1,6 @@
 use vodozemac::{KeyError, SignatureError};
 
+#[allow(clippy::enum_variant_names)]
 #[derive(thiserror::Error, Debug, axum_thiserror::ErrorStatus)]
 pub enum Error {
     #[error("Invalid Signature")]

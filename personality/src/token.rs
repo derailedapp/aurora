@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use crate::{
-    db::{account::Account, actor::Actor},
+    db::{account::Account, actor::Actor, tent::clean_get_user_db},
     error::Error,
 };
 
@@ -39,26 +39,30 @@ impl Claims {
 
 pub async fn get_user(
     map: &HeaderMap,
-    key: &str,
-    db: &SqlitePool,
-) -> Result<(Actor, Account), Error> {
+    key: &str
+) -> Result<(Actor, Account, SqlitePool), Error> {
     let claims = Claims::from_token_map(map, &DecodingKey::from_secret(key.as_bytes()))?;
 
-    if let Some(account) = sqlx::query_as!(
-        Account,
-        "SELECT * FROM accounts WHERE id IN (SELECT account_id FROM sessions WHERE id = $1);",
-        claims.sub
-    )
-    .fetch_optional(db)
-    .await?
-    {
-        Ok((
-            sqlx::query_as!(Actor, "SELECT * FROM actors WHERE id = $1;", account.id)
-                .fetch_one(db)
-                .await?,
-            account,
-        ))
+    if let Ok(db) = clean_get_user_db(&claims.sub).await {
+        if let Some(account) = sqlx::query_as!(
+            Account,
+            "SELECT * FROM accounts WHERE id IN (SELECT account_id FROM sessions WHERE id = $1);",
+            claims.sub
+        )
+        .fetch_optional(&db)
+        .await?
+        {
+            Ok((
+                sqlx::query_as!(Actor, "SELECT * FROM actors WHERE id = $1;", account.id)
+                    .fetch_one(&db)
+                    .await?,
+                account,
+                db
+            ))
+        } else {
+            Err(Error::ExpiredSession)
+        }
     } else {
-        Err(Error::ExpiredSession)
+        Err(Error::BadToken)
     }
 }

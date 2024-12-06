@@ -35,3 +35,35 @@ pub async fn get_user_db(id: &str) -> Result<SqlitePool, Error> {
     migrate!("./migrations").run(&pool).await?;
     Ok(pool)
 }
+
+pub async fn clean_get_user_db(id: &str) -> Result<SqlitePool, Error> {
+    let uri = "sqlite:/".to_string()
+        + &env::var("BASE_DB_PATH").expect("Couldn't find a path for SQLite database store")
+        + "/"
+        + id;
+    let exists = Sqlite::database_exists(&uri).await?;
+
+    if !exists {
+        return Err(Error::DatabaseNotExists);
+    }
+
+    let pool = SqlitePoolOptions::new().connect(&uri).await?;
+    migrate!("./migrations").run(&pool).await?;
+    Ok(pool)
+}
+
+pub async fn delete_user_db(id: &str) -> Result<(), Error> {
+    let uri = "sqlite:/".to_string()
+        + &env::var("BASE_DB_PATH").expect("Couldn't find a path for SQLite database store")
+        + "/"
+        + id;
+    let exists = Sqlite::database_exists(&uri).await?;
+
+    if !exists {
+        return Err(Error::DatabaseNotExists);
+    }
+
+    Sqlite::drop_database(&uri).await?;
+
+    Ok(())
+}
