@@ -26,7 +26,7 @@ use axum::{
 };
 use error::Error;
 use nanoid::nanoid;
-use raildepot::{CreateId, Identifier, PushPublicKeys};
+use raildepot::{CreateId, DeleteIdentifier, Identifier, PushPublicKeys};
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -86,9 +86,13 @@ async fn create_id(
     let id = nanoid!();
 
     let mut tx = db.begin().await?;
-    sqlx::query!("INSERT INTO identifiers (id) VALUES ($1);", id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query!(
+        "INSERT INTO identifiers (id, tombstone) VALUES ($1, $2);",
+        id,
+        false
+    )
+    .execute(&mut *tx)
+    .await?;
     for key in model.public_keys.iter() {
         Ed25519PublicKey::from_base64(key)?;
         sqlx::query!(
@@ -109,6 +113,7 @@ async fn create_id(
             public_keys: model.public_keys,
             handle: None,
             server: model.server,
+            tombstone: false,
         }),
     ))
 }
@@ -128,7 +133,7 @@ async fn get_public_keys(
 async fn get_identifier(
     State((db, _)): State<(SqlitePool, reqwest::Client)>,
     Path(id): Path<String>,
-) -> Result<Json<Identifier>, Error> {
+) -> Result<(StatusCode, Json<Identifier>), Error> {
     let id_rec = sqlx::query!("SELECT * FROM identifiers WHERE id = $1;", id)
         .fetch_one(&db)
         .await?;
@@ -137,12 +142,22 @@ async fn get_identifier(
         .await?;
     let public_keys: Vec<String> = keys_recs.into_iter().map(|r| r.key).collect();
 
-    Ok(Json(Identifier {
-        id: id_rec.id,
-        public_keys,
-        handle: id_rec.handle,
-        server: id_rec.server,
-    }))
+    let status = if id_rec.tombstone {
+        StatusCode::GONE
+    } else {
+        StatusCode::OK
+    };
+
+    Ok((
+        status,
+        Json(Identifier {
+            id: id_rec.id,
+            public_keys,
+            handle: id_rec.handle,
+            server: id_rec.server,
+            tombstone: id_rec.tombstone,
+        }),
+    ))
 }
 
 async fn push_public_keys(
@@ -208,6 +223,71 @@ async fn push_public_keys(
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }
 
+async fn kill_identifier(
+    headers: HeaderMap,
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
+    Path(id): Path<String>,
+    body: Bytes,
+) -> Result<(StatusCode, impl IntoResponse), Error> {
+    // NOTE: really annoying but we have to do JSON validation ourself here
+    // because `body` and `Json(model)` can't coexist in Axum land.
+    let model: DeleteIdentifier = serde_json::from_slice(&body)?;
+
+    let dt = chrono::DateTime::from_timestamp_millis(model.ts).unwrap_or_default();
+
+    if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
+        return Err(Error::InvalidTimestamp);
+    }
+
+    let sig = headers.get("X-Depot-Signature");
+
+    if let Some(sig) = sig {
+        let public_keys = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
+            .fetch_all(&db)
+            .await?;
+        let keys: Vec<String> = public_keys.into_iter().map(|r| r.key).collect();
+
+        let mut verified = false;
+
+        for key in keys {
+            let k = Ed25519PublicKey::from_base64(&key)?;
+
+            if let Ok(()) = k.verify(
+                &body,
+                &Ed25519Signature::from_base64(sig.to_str().unwrap())?,
+            ) {
+                verified = true;
+                break;
+            }
+        }
+
+        if !verified {
+            return Err(Error::BadSignature);
+        }
+
+        let mut tx = db.begin().await?;
+
+        sqlx::query!(
+            "UPDATE identifiers SET handle = $1, server = $2, tombstone = $3 WHERE id = $4;",
+            Option::<String>::None,
+            Option::<String>::None,
+            true,
+            id
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query!("DELETE FROM public_keys WHERE id = $1", id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+    } else {
+        return Err(Error::NoSignature);
+    }
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().unwrap();
@@ -229,7 +309,7 @@ async fn main() {
 
     let app = axum::Router::new()
         .route("/", post(create_id))
-        .route("/:id", get(get_identifier))
+        .route("/:id", get(get_identifier).delete(kill_identifier))
         .route("/:id/keys", post(push_public_keys).get(get_public_keys))
         .layer(cors)
         .with_state((db, reqwest::Client::new()));
