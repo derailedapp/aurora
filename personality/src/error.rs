@@ -16,8 +16,8 @@
 
 use reqwest::header::ToStrError;
 
-
 #[derive(thiserror::Error, Debug, axum_thiserror::ErrorStatus)]
+#[allow(clippy::enum_variant_names)]
 pub enum Error {
     #[error("Internal Server Error")]
     #[status(500)]
@@ -61,5 +61,9 @@ pub enum Error {
 
     #[error("Invalid email or password")]
     #[status(401)]
-    Argon2Error
+    Argon2Error,
+
+    #[error("Invalid parent id")]
+    #[status(400)]
+    InvalidParentId,
 }

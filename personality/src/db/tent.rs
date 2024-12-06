@@ -22,10 +22,11 @@ use sqlx::{Sqlite, SqlitePool, migrate::MigrateDatabase, sqlite::SqlitePoolOptio
 use crate::error::Error;
 
 pub async fn get_user_db(id: &str) -> Result<SqlitePool, Error> {
-    let uri = "sqlite:/".to_string()
-        + &env::var("BASE_DB_PATH").expect("Couldn't find a path for SQLite database store")
-        + "/"
-        + id;
+    let uri = format!(
+        "sqlite:/{}/{}",
+        env::var("BASE_DB_PATH").expect("Couldn't find a path for SQLite database store"),
+        id
+    );
     let exists = Sqlite::database_exists(&uri).await?;
 
     if !exists {

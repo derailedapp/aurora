@@ -46,6 +46,7 @@ async fn main() {
     let app = axum::Router::new()
         .route("/public-keys", get(get_public_keys))
         .merge(routes::users::router())
+        .merge(routes::tracks::router())
         .layer(cors)
         .with_state(State {
             server: std::env::var("PRSN_SERVER").expect("Server domain is needed to be set with `PRSN_SERVER` for identification. If running in dev mode, use `localhost` and make sure the variable `DEPT_DEV` is present on your Rail Depot instance."),

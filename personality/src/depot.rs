@@ -18,26 +18,29 @@ use raildepot::{CreateId, DeleteIdentifier, Identifier};
 use sqlx::types::chrono::Utc;
 use vodozemac::{Ed25519PublicKey, Ed25519SecretKey};
 
-use crate::{error::Error, state::State};
+use crate::{error::Error, routes::tracks::TrackExistence, state::State};
 
 pub async fn create_identifier(state: &State, public_key: Ed25519PublicKey) -> String {
-    let mut public_keys = Vec::new();
-    public_keys.push(public_key.to_base64());
+    let public_keys = vec![public_key.to_base64()];
 
     let body = serde_json::to_string(&CreateId {
         public_keys,
         server: state.server.clone(),
-        ts: Utc::now().timestamp_millis()
-    }).unwrap();
+        ts: Utc::now().timestamp_millis(),
+    })
+    .unwrap();
 
     let depot = std::env::var("DEPOT_URL").expect("Depot URL not present");
 
     let req = state
         .client
-        .post(depot + "/")
+        .post(depot)
         .body(body.clone())
         .header("Content-Type", "application/json")
-        .header("X-Depot-Signature", state.key.sign(body.as_bytes()).to_base64())
+        .header(
+            "X-Depot-Signature",
+            state.key.sign(body.as_bytes()).to_base64(),
+        )
         .send()
         .await
         .unwrap();
@@ -45,20 +48,61 @@ pub async fn create_identifier(state: &State, public_key: Ed25519PublicKey) -> S
     json.id
 }
 
-pub async fn delete_identifier(state: &State, identifier: &str, key: Ed25519SecretKey) -> Result<(), Error> {
+pub async fn delete_identifier(
+    state: &State,
+    identifier: &str,
+    key: Ed25519SecretKey,
+) -> Result<(), Error> {
     let body = serde_json::to_string(&DeleteIdentifier {
-        ts: Utc::now().timestamp_millis()
-    }).unwrap();
+        ts: Utc::now().timestamp_millis(),
+    })
+    .unwrap();
 
     let depot = std::env::var("DEPOT_URL").expect("Depot URL not present");
 
     state
         .client
-        .delete(depot + "/" + identifier)
+        .delete(format!("{}/{}", depot, identifier))
         .body(body.clone())
         .header("Content-Type", "application/json")
         .header("X-Depot-Signature", key.sign(body.as_bytes()).to_base64())
         .send()
         .await?;
     Ok(())
+}
+
+pub async fn get_identifier(
+    client: &reqwest::Client,
+    identifier: &str,
+) -> Result<Identifier, Error> {
+    let depot = std::env::var("DEPOT_URL").expect("Depot URL not present");
+
+    Ok(client
+        .get(format!("{}/{}", depot, identifier))
+        .send()
+        .await?
+        .json::<Identifier>()
+        .await?)
+}
+
+pub async fn verify_track_existence(
+    client: &reqwest::Client,
+    identifier: &Identifier,
+    track_id: &str,
+) -> Result<(), Error> {
+    let req = client
+        .get(format!(
+            "http://{}/users/{}/tracks/{}/exists",
+            identifier.server, identifier.id, track_id
+        ))
+        .send()
+        .await?
+        .json::<TrackExistence>()
+        .await?;
+
+    if req.exists {
+        Ok(())
+    } else {
+        Err(Error::InvalidParentId)
+    }
 }

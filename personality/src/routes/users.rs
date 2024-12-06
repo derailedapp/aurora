@@ -17,9 +17,15 @@
 use std::time::Duration;
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier
+    Argon2, PasswordHash, PasswordVerifier,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
-use axum::{extract::State, http::HeaderMap, routing::{delete, post}, Json};
+use axum::{
+    Json,
+    extract::State,
+    http::HeaderMap,
+    routing::{delete, post},
+};
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
@@ -27,7 +33,10 @@ use sqlx::types::chrono;
 use vodozemac::Ed25519SecretKey;
 
 use crate::{
-    db::{account::Account, actor::Actor, session::Session, tent::delete_user_db}, depot::delete_identifier, error::Error, token::{get_user, Claims}
+    db::{account::Account, actor::Actor, session::Session, tent::delete_user_db},
+    depot::delete_identifier,
+    error::Error,
+    token::{Claims, get_user},
 };
 
 #[derive(Deserialize, Validate)]
@@ -82,15 +91,25 @@ pub struct DeleteUser {
 pub async fn delete_user(
     headers: HeaderMap,
     State(state): State<crate::state::State>,
-    Json(model): Json<DeleteUser>
+    Json(model): Json<DeleteUser>,
 ) -> Result<String, Error> {
     let (_, account, _) = get_user(&headers, &state.jwt_secret).await?;
 
     let argon2 = Argon2::default();
 
-    argon2.verify_password(model.password.as_bytes(), &PasswordHash::new(&account.password).map_err(|_| Error::Argon2Error)?).map_err(|_| Error::Argon2Error)?;
+    argon2
+        .verify_password(
+            model.password.as_bytes(),
+            &PasswordHash::new(&account.password).map_err(|_| Error::Argon2Error)?,
+        )
+        .map_err(|_| Error::Argon2Error)?;
 
-    delete_identifier(&state, &account.id, Ed25519SecretKey::from_base64(&account.ed_key)?).await?;
+    delete_identifier(
+        &state,
+        &account.id,
+        Ed25519SecretKey::from_base64(&account.ed_key)?,
+    )
+    .await?;
     delete_user_db(&account.id).await?;
 
     Ok("".to_string())

@@ -53,10 +53,7 @@ impl Claims {
     }
 }
 
-pub async fn get_user(
-    map: &HeaderMap,
-    key: &str
-) -> Result<(Actor, Account, SqlitePool), Error> {
+pub async fn get_user(map: &HeaderMap, key: &str) -> Result<(Actor, Account, SqlitePool), Error> {
     let claims = Claims::from_token_map(map, &DecodingKey::from_secret(key.as_bytes()))?;
 
     if let Ok(db) = clean_get_user_db(&claims.sub).await {
@@ -73,7 +70,7 @@ pub async fn get_user(
                     .fetch_one(&db)
                     .await?,
                 account,
-                db
+                db,
             ))
         } else {
             Err(Error::ExpiredSession)

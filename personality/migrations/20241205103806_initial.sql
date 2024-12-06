@@ -17,8 +17,9 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 CREATE TABLE IF NOT EXISTS tracks (
     id TEXT NOT NULL PRIMARY KEY,
-    author_id TEXT,
-    content TEXT,
+    author_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at BIGINT NOT NULL,
     -- abcde1234/post_id
     parent_id TEXT,
     FOREIGN KEY (author_id) REFERENCES actors(id) ON DELETE SET NULL
