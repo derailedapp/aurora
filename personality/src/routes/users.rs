@@ -36,6 +36,7 @@ use crate::{
     db::{account::Account, actor::Actor, session::Session, tent::delete_user_db},
     depot::delete_identifier,
     error::Error,
+    produce::{BeamMessage, beam_out},
     token::{Claims, get_user},
 };
 
@@ -93,7 +94,7 @@ pub async fn delete_user(
     State(state): State<crate::state::State>,
     Json(model): Json<DeleteUser>,
 ) -> Result<String, Error> {
-    let (_, account, _) = get_user(&headers, &state.jwt_secret).await?;
+    let (actor, account, _) = get_user(&headers, &state.jwt_secret).await?;
 
     let argon2 = Argon2::default();
 
@@ -111,6 +112,8 @@ pub async fn delete_user(
     )
     .await?;
     delete_user_db(&account.id).await?;
+
+    beam_out(BeamMessage::UserDelete(actor), &state).await?;
 
     Ok("".to_string())
 }

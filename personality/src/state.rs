@@ -20,4 +20,5 @@ pub struct State {
     pub key: vodozemac::Ed25519Keypair,
     pub server: String,
     pub jwt_secret: String,
+    pub plsr: pulsar::Pulsar<pulsar::TokioExecutor>,
 }

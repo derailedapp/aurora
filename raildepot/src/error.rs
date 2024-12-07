@@ -54,4 +54,8 @@ pub enum Error {
     #[error("Invalid Timestamp")]
     #[status(400)]
     InvalidTimestamp,
+
+    #[error("Maximum public keys set")]
+    #[status(400)]
+    MaximumPublicKeys,
 }

@@ -190,6 +190,11 @@ async fn push_public_keys(
         let public_keys = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
             .fetch_all(&db)
             .await?;
+
+        if public_keys.len() == 10 {
+            return Err(Error::MaximumPublicKeys);
+        }
+
         let keys: Vec<String> = public_keys.into_iter().map(|r| r.key).collect();
 
         let mut verified = false;
@@ -216,6 +221,78 @@ async fn push_public_keys(
             Ed25519PublicKey::from_base64(key)?;
             sqlx::query!(
                 "INSERT INTO public_keys (id, key) VALUES ($1, $2);",
+                id,
+                key
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+    } else {
+        return Err(Error::NoSignature);
+    }
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
+async fn kill_public_keys(
+    headers: HeaderMap,
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
+    Path(id): Path<String>,
+    body: Bytes,
+) -> Result<(StatusCode, impl IntoResponse), Error> {
+    // NOTE: really annoying but we have to do JSON validation ourself here
+    // because `body` and `Json(model)` can't coexist in Axum land.
+    let model: PushPublicKeys = serde_json::from_slice(&body)?;
+
+    let dt = Utc::now();
+
+    if (dt.timestamp_millis() - model.ts).lt(&0) | (dt.timestamp_millis() - model.ts).gt(&60_500) {
+        return Err(Error::InvalidTimestamp);
+    }
+
+    let sig = headers.get("X-Depot-Signature");
+
+    if let Some(sig) = sig {
+        let public_keys = sqlx::query!("SELECT key FROM public_keys WHERE id = $1", id)
+            .fetch_all(&db)
+            .await?;
+
+        if public_keys.len() == 10 {
+            return Err(Error::MaximumPublicKeys);
+        }
+
+        let mut keys: Vec<String> = public_keys.into_iter().map(|r| r.key).collect();
+
+        let mut verified = false;
+
+        for (idx, key) in keys.clone().iter().enumerate() {
+            let k = Ed25519PublicKey::from_base64(key)?;
+
+            if model.public_keys.contains(key) {
+                keys.remove(idx);
+            }
+
+            if let Ok(()) = k.verify(
+                &body,
+                &Ed25519Signature::from_base64(sig.to_str().unwrap())?,
+            ) {
+                verified = true;
+                break;
+            }
+        }
+
+        if !verified {
+            return Err(Error::BadSignature);
+        }
+
+        let mut tx = db.begin().await?;
+
+        for key in model.public_keys.iter() {
+            Ed25519PublicKey::from_base64(key)?;
+            sqlx::query!(
+                "DELETE FROM public_keys WHERE id = $1 AND key = $2;",
                 id,
                 key
             )
@@ -318,7 +395,12 @@ async fn main() {
     let app = axum::Router::new()
         .route("/", post(create_id))
         .route("/:id", get(get_identifier).delete(kill_identifier))
-        .route("/:id/keys", post(push_public_keys).get(get_public_keys))
+        .route(
+            "/:id/keys",
+            post(push_public_keys)
+                .get(get_public_keys)
+                .delete(kill_public_keys),
+        )
         .layer(cors)
         .with_state((db, reqwest::Client::new()));
 

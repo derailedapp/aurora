@@ -41,10 +41,14 @@ pub enum Error {
 
     #[error("Internal Server Error")]
     #[status(500)]
-    FailedPasswordHash,
+    PulsarError(#[from] pulsar::Error),
 
     #[error("Internal Server Error")]
     #[status(500)]
+    FailedPasswordHash,
+
+    #[error("User not found")]
+    #[status(404)]
     DatabaseNotExists,
 
     #[error("Invalid Token")]

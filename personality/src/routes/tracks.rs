@@ -16,19 +16,40 @@
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
-    routing::{delete, post},
+    routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 
 use crate::{
-    db::track::Track,
+    db::{tent::clean_get_user_db, track::Track},
     depot::{get_identifier, verify_track_existence},
     error::Error,
+    produce::{BeamMessage, beam_out},
     token::get_user,
 };
+
+#[derive(Serialize, Deserialize, Validate)]
+pub struct GetUserTrack {
+    #[validate(minimum = 1)]
+    #[validate(maximum = 2048)]
+    limit: i32,
+}
+
+pub async fn get_user_tracks(
+    Query(params): Query<GetUserTrack>,
+    Path(id): Path<String>,
+) -> Result<Json<Vec<Track>>, Error> {
+    let db = clean_get_user_db(&id).await?;
+
+    Ok(Json(
+        sqlx::query_as!(Track, "SELECT * FROM tracks LIMIT $1;", params.limit)
+            .fetch_all(&db)
+            .await?,
+    ))
+}
 
 #[derive(Deserialize, Validate)]
 pub struct CreateTrack {
@@ -69,6 +90,8 @@ pub async fn create_track(
 
     let track = Track::create(&db, &account, &model.content, model.parent_id).await?;
 
+    beam_out(BeamMessage::TrackCreate(track.clone()), &state).await?;
+
     Ok(Json(track))
 }
 
@@ -79,9 +102,13 @@ pub async fn delete_track(
 ) -> Result<String, Error> {
     let (_actor, _account, db) = get_user(&headers, &state.jwt_secret).await?;
 
-    sqlx::query!("DELETE FROM tracks WHERE id = $1;", id)
-        .execute(&db)
+    let track = sqlx::query_as!(Track, "DELETE FROM tracks WHERE id = $1 RETURNING *;", id)
+        .fetch_optional(&db)
         .await?;
+
+    if let Some(track) = track {
+        beam_out(BeamMessage::TrackDelete(track), &state).await?;
+    }
 
     Ok("".to_string())
 }
@@ -93,6 +120,7 @@ pub struct TrackExistence {
 
 pub fn router() -> axum::Router<crate::state::State> {
     axum::Router::new()
+        .route("/users/:id/tracks", get(get_user_tracks))
         .route("/tracks", post(create_track))
         .route("/tracks/:id", delete(delete_track))
 }
