@@ -1,4 +1,6 @@
 # Derailed
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fderailedapp%2Fderailed.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fderailedapp%2Fderailed?ref=badge_shield)
+
 
 A social media where you're the platform. Constantly-evolving Protocol for Decentralized communication.
 Social networking, instant messaging, and more, pick your poison, and keep your data, yours.
@@ -21,3 +23,6 @@ Social networking, instant messaging, and more, pick your poison, and keep your 
 ## License
 
 Derailed is completely open source. It is licensed under AGPL-3.0.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fderailedapp%2Fderailed.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fderailedapp%2Fderailed?ref=badge_large)
