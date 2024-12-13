@@ -1,0 +1,21 @@
+[package]
+name = "raildepot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio.workspace = true
+axum.workspace = true
+serde.workspace = true
+tower-http.workspace = true
+nanoid.workspace = true
+sqlx.workspace = true
+vodozemac.workspace = true
+dotenvy.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+regex.workspace = true
+serde_valid.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+axum_thiserror.workspace = true

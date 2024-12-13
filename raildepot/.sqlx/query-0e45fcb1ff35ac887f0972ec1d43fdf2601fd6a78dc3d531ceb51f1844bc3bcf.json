@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM public_keys WHERE id = $1 AND key = $2;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0e45fcb1ff35ac887f0972ec1d43fdf2601fd6a78dc3d531ceb51f1844bc3bcf"
+}

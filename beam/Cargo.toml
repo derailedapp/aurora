@@ -1,0 +1,18 @@
+[package]
+name = "beam"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_valid.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+persona.workspace = true
+futures.workspace = true
+raildepot.workspace = true
+vodozemac.workspace = true
+sqlx.workspace = true
+rust-bert.workspace = true
