@@ -10,7 +10,7 @@ which allow Derailed to do decentralized instant messaging, social networking, a
 parts:
 
 - Rail Depot - The core piece of the Derailed decentralized question.
-  Rail Depot handles the identification of users, guilds, and dm channels. It is a centralized, easy-to-run, cheap to run
+  Rail Depot handles the identification of users, guilds, and dm channels. It is a centralized, easy-to-run, cheap to manage
   service which allows you to switch Persona servers without leaving behind your identity.
 
 - Persona - The service and protocol which stores you user data, tracks, direct messages, etc.

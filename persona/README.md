@@ -1,6 +1,6 @@
-# Personality
+# Persona
 
-TODO
+Server which stores, manages, and controls user data and actions.
 
 ## Development
 

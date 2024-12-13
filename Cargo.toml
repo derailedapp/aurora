@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "personality", "raildepot" , "beam" ]
+members = [ "persona", "raildepot" , "beam" ]
 
 [workspace.dependencies]
 tokio = { version = "1", features = [ "full" ] }
@@ -25,6 +25,6 @@ thiserror = "2"
 axum_thiserror = "0.1.0"
 pulsar = "6"
 
-personality = { path = "./personality" }
+persona = { path = "./persona" }
 raildepot = { path = "./raildepot" }
 beam = { path = "./beam" }

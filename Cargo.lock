@@ -458,8 +458,12 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 name = "beam"
 version = "0.1.0"
 dependencies = [
+ "persona",
+ "reqwest 0.12.9",
  "serde",
+ "serde_json",
  "serde_valid",
+ "thiserror 2.0.4",
  "tokio",
 ]
 
@@ -2299,7 +2303,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
-name = "personality"
+name = "persona"
 version = "0.1.0"
 dependencies = [
  "argon2",
