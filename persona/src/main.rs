@@ -17,10 +17,7 @@
 #![feature(duration_constructors)]
 
 use axum::routing::get;
-use pulsar::{
-    Authentication, Producer, Pulsar, TokioExecutor, authentication::oauth2::OAuth2Authentication,
-    message::proto, producer,
-};
+use pulsar::{Authentication, Pulsar, TokioExecutor, authentication::oauth2::OAuth2Authentication};
 use reqwest::Method;
 use state::State;
 use std::env;
@@ -40,24 +37,6 @@ mod ws;
 
 pub async fn get_public_keys(axum::extract::State(state): axum::extract::State<State>) -> String {
     state.key.public_key().to_base64()
-}
-
-pub async fn get_producer(
-    pulsar: &Pulsar<TokioExecutor>,
-) -> Result<Producer<TokioExecutor>, error::Error> {
-    Ok(pulsar
-        .producer()
-        .with_topic("non-persistent://public/default/relay")
-        .with_name("personality")
-        .with_options(producer::ProducerOptions {
-            schema: Some(proto::Schema {
-                r#type: proto::schema::Type::String as i32,
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .build()
-        .await?)
 }
 
 #[tokio::main]

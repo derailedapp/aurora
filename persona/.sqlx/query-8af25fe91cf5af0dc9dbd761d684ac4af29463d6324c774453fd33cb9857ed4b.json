@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO accounts (id, email, password, flags, theme, pickle, ed_key) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "password",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "flags",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "theme",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "pickle",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "ed_key",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8af25fe91cf5af0dc9dbd761d684ac4af29463d6324c774453fd33cb9857ed4b"
+}

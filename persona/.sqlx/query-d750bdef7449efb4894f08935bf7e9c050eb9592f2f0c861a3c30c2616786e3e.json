@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM accounts WHERE id IN (SELECT account_id FROM sessions WHERE id = $1);",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "password",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "flags",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "theme",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "pickle",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "ed_key",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d750bdef7449efb4894f08935bf7e9c050eb9592f2f0c861a3c30c2616786e3e"
+}

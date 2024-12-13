@@ -14,6 +14,9 @@
     limitations under the License.
 */
 
+mod algo;
+mod spider;
+
 use serde::Deserialize;
 use serde_valid::Validate;
 
@@ -38,18 +41,10 @@ pub struct Recommend {
     #[validate(max_length = 128)]
     #[validate(min_length = 24)]
     pub thread_id: Option<String>,
-    /// A list of tracks which the user has interacted with recently.
-    #[serde(default)]
-    #[validate(max_items = 1000)]
-    pub relevant_tracks: Vec<String>,
-    /// A list of relevant highly-interacted followed users.
-    #[serde(default)]
-    #[validate(max_items = 1000)]
-    pub followed_users: Vec<String>,
-    /// A list of topics a user is interested in.
-    #[serde(default)]
-    #[validate(max_items = 1000)]
-    pub relevant_topics: Vec<String>,
+    /// Actor ID.
+    /// The actor who's frontpage should be returned.
+    /// If `None` returns the newest crawled posts.
+    pub actor_id: Option<String>,
 }
 
 #[tokio::main]

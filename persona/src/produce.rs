@@ -14,15 +14,32 @@
     limitations under the License.
 */
 
-use pulsar::SerializeMessage;
+use pulsar::{Producer, Pulsar, SerializeMessage, TokioExecutor, producer, proto};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 
 use crate::{
     db::{actor::Actor, track::Track},
-    get_producer,
     state::State,
 };
+
+pub async fn get_producer(
+    pulsar: &Pulsar<TokioExecutor>,
+) -> Result<Producer<TokioExecutor>, crate::error::Error> {
+    Ok(pulsar
+        .producer()
+        .with_topic("non-persistent://public/default/relay")
+        .with_name("personality")
+        .with_options(producer::ProducerOptions {
+            schema: Some(proto::Schema {
+                r#type: proto::schema::Type::String as i32,
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+        .build()
+        .await?)
+}
 
 #[derive(Serialize, Deserialize, Validate)]
 pub enum BeamMessage {

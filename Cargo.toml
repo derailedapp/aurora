@@ -5,7 +5,7 @@ members = [ "persona", "raildepot" , "beam" ]
 [workspace.dependencies]
 tokio = { version = "1", features = [ "full" ] }
 axum = { version = "0.7", features = [ "ws", "macros" ] }
-sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "sqlite", "macros", "chrono" ] }
+sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-native-tls", "sqlite", "postgres", "macros", "chrono" ] }
 serde = { version = "1", features = [ "derive" ] }
 serde_json = "1"
 serde_valid = "0.25"
@@ -16,6 +16,7 @@ jsonwebtoken = "9"
 chrono = "0.4"
 dotenvy = "0.15"
 bitflags = "2"
+futures = "0.3"
 futures-util = "0.3"
 tower-http = { version = "0.6", features = [ "cors" ] }
 nanoid = "0.4"
@@ -24,6 +25,7 @@ reqwest = { version = "0.12", features = ["json"] }
 thiserror = "2"
 axum_thiserror = "0.1.0"
 pulsar = "6"
+rust-bert = "0.23"
 
 persona = { path = "./persona" }
 raildepot = { path = "./raildepot" }

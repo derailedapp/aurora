@@ -58,6 +58,5 @@ pub struct DeleteIdentifier {
 #[derive(Serialize, Deserialize, Validate)]
 pub struct VerifyIdentifiers {
     /// A list of identifiers to verify the existence of
-    #[validate(max_items = 15_000)]
     pub identifiers: Vec<String>,
 }
