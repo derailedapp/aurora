@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE identifiers SET handle = $1, server = $2, tombstone = $3 WHERE id = $4;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "93fd00253f7d0e7822f8d63b3b371a10c8900c51312ae275f749daaab4276e43"
+}

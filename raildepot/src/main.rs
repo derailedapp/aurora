@@ -28,7 +28,7 @@ use axum::{
 use chrono::Utc;
 use error::Error;
 use nanoid::nanoid;
-use raildepot::{CreateId, DeleteIdentifier, Identifier, PushPublicKeys};
+use raildepot::{CreateId, DeleteIdentifier, Identifier, PushPublicKeys, VerifyIdentifiers};
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -373,6 +373,28 @@ async fn kill_identifier(
     Ok((StatusCode::NO_CONTENT, "".to_string()))
 }
 
+// TODO: this is bad. Figure a way to not do this bad.
+async fn verify_identifiers(
+    State((db, _)): State<(SqlitePool, reqwest::Client)>,
+    Json(iden): Json<VerifyIdentifiers>,
+) -> Result<(StatusCode, String), Error> {
+    for id in iden.identifiers {
+        let exists = sqlx::query!("SELECT id, tombstone FROM identifiers WHERE id = $1", id)
+            .fetch_optional(&db)
+            .await?;
+
+        if exists.is_none() {
+            return Err(Error::IdenDoesNotExist);
+        } else if let Some(e) = exists {
+            if e.tombstone {
+                return Err(Error::IdentifierTombstone);
+            }
+        }
+    }
+
+    Ok((StatusCode::NO_CONTENT, "".to_string()))
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().unwrap();
@@ -394,6 +416,7 @@ async fn main() {
 
     let app = axum::Router::new()
         .route("/", post(create_id))
+        .route("/exists", get(verify_identifiers))
         .route("/:id", get(get_identifier).delete(kill_identifier))
         .route(
             "/:id/keys",

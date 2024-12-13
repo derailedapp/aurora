@@ -58,4 +58,12 @@ pub enum Error {
     #[error("Maximum public keys set")]
     #[status(400)]
     MaximumPublicKeys,
+
+    #[error("Identifier does not exist")]
+    #[status(418)]
+    IdenDoesNotExist,
+
+    #[error("Identifier is a tombstone")]
+    #[status(410)]
+    IdentifierTombstone,
 }

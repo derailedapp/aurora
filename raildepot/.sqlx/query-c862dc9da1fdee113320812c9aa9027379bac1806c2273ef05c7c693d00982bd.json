@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO identifiers (id, tombstone) VALUES ($1, $2);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c862dc9da1fdee113320812c9aa9027379bac1806c2273ef05c7c693d00982bd"
+}
